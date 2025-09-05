@@ -39,7 +39,6 @@ class MainWindow(QMainWindow):
         text = self.clipboard.text()
         if text and text != self.last_text:
             self.last_text = text
-            # TODO: Replace "Unknown App" with actual frontmost app on macOS
             source_app = get_frontmost_app()
             self.history.add_item(text, source_app=source_app)
             self.update_apps_dropdown()
@@ -63,7 +62,7 @@ class MainWindow(QMainWindow):
             return
         items = self.history.get_items_by_app(selected_app)
         for item in items:
-            self.list_widget.addItem(f"{item.timestamp.strftime('%H:%M:%S')} - {item.content[:50]}")
+            self.list_widget.addItem(f"{item.timestamp.strftime('%H:%M:%S')} - {item.content}") # item.content[:50] for putting a limit of 50 characters
 
     def show_context_menu(self, position):
         menu = QMenu()

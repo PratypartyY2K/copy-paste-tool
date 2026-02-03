@@ -2,17 +2,18 @@ from clipboard_item import ClipboardItem
 from collections import OrderedDict
 import hashlib
 import time
+from datetime import datetime
 
 MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30
 
-class History:
+class HistoryStore:
     def __init__(self):
         self.items = []
         self._recent_hashes = OrderedDict()
         self._last_seen_by_app = {}
 
-    def add_item(self, content, source_app="Unknown App"):
+    def add_item(self, content, source_app="Unknown App", timestamp=None):
         if not content:
             return None
 
@@ -32,11 +33,17 @@ class History:
         if last_seen is not None and (now - last_seen) <= APP_DEDUPE_SECONDS:
             for it in self.items:
                 if it.content == content and it.source_app == source_app:
+                    self._last_seen_by_app[(source_app, h)] = now
                     return it
             self._last_seen_by_app[(source_app, h)] = now
             return None
 
         item = ClipboardItem(content, source_app)
+        if timestamp is not None:
+            try:
+                item.timestamp = datetime.fromtimestamp(timestamp)
+            except Exception:
+                pass
         self.items.insert(0, item)
 
         try:
@@ -57,3 +64,5 @@ class History:
 
     def get_items_by_app(self, app_name):
         return [item for item in self.items if item.source_app == app_name]
+
+History = HistoryStore

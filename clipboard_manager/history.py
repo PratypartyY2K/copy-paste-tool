@@ -5,7 +5,6 @@ class History:
         self.items = []
 
     def add_item(self, content, source_app="Unknown App"):
-        # Avoid duplicate consecutive entries
         if self.items and self.items[0].content == content:
             return self.items[0]
 
@@ -14,7 +13,6 @@ class History:
         return item
 
     def get_apps(self):
-        """Return unique apps in history"""
         return sorted(set(item.source_app for item in self.items))
 
     def get_items_by_app(self, app_name):

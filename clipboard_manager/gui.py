@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QApplication, QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
 from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout
 from history import History
 from utils import get_frontmost_app
 
@@ -11,6 +12,8 @@ class MainWindow(QMainWindow):
 
         self.history = History()
         self.last_text = ""
+        self._ignore_clipboard = False
+        self._pause_ms = 500
 
         # Dropdown for recent apps
         self.app_dropdown = QComboBox()
@@ -23,6 +26,16 @@ class MainWindow(QMainWindow):
 
         # Layout
         layout = QVBoxLayout()
+        pause_layout = QHBoxLayout()
+        pause_label = QLabel('Pause (ms):')
+        self.pause_spin = QSpinBox()
+        self.pause_spin.setRange(0, 5000)
+        self.pause_spin.setSingleStep(50)
+        self.pause_spin.setValue(self._pause_ms)
+        self.pause_spin.valueChanged.connect(self._on_pause_spin_changed)
+        pause_layout.addWidget(pause_label)
+        pause_layout.addWidget(self.pause_spin)
+        layout.addLayout(pause_layout)
         layout.addWidget(self.app_dropdown)
         layout.addWidget(self.list_widget)
         container = QWidget()
@@ -36,6 +49,9 @@ class MainWindow(QMainWindow):
         self.timer.start(500)
 
     def check_clipboard(self):
+        if self._ignore_clipboard:
+            return
+
         text = self.clipboard.text()
         if text and text != self.last_text:
             self.last_text = text
@@ -44,13 +60,24 @@ class MainWindow(QMainWindow):
             self.update_apps_dropdown()
             self.update_list()
 
+    def _pause_clipboard_capture(self, ms=None):
+        if ms is None:
+            ms = self._pause_ms
+        self._ignore_clipboard = True
+        QTimer.singleShot(ms, self._resume_clipboard_capture)
+
+    def _resume_clipboard_capture(self):
+        self._ignore_clipboard = False
+
+    def _on_pause_spin_changed(self, value: int):
+        self._pause_ms = int(value)
+
     def update_apps_dropdown(self):
         apps = self.history.get_apps()
         current_app = self.app_dropdown.currentText()
-        self.app_dropdown.blockSignals(True)  # prevent signal triggering while updating
+        self.app_dropdown.blockSignals(True)
         self.app_dropdown.clear()
         self.app_dropdown.addItems(apps)
-        # Restore previous selection if still exists
         if current_app in apps:
             self.app_dropdown.setCurrentText(current_app)
         self.app_dropdown.blockSignals(False)
@@ -80,4 +107,6 @@ class MainWindow(QMainWindow):
             items = self.history.get_items_by_app(selected_app)
             if selected_row != -1:
                 content = items[selected_row].content
+                self._pause_clipboard_capture()
+                self.last_text = content
                 self.clipboard.setText(content)

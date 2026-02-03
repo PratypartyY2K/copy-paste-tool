@@ -44,9 +44,7 @@ class MainWindow(QMainWindow):
 
         # Clipboard
         self.clipboard = QApplication.clipboard()
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.check_clipboard)
-        self.timer.start(500)
+        self.clipboard.dataChanged.connect(self.check_clipboard)
 
     def check_clipboard(self):
         if self._ignore_clipboard:

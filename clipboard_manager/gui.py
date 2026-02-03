@@ -65,6 +65,12 @@ class MainWindow(QMainWindow):
             self.list_widget.addItem(f"{item.timestamp.strftime('%H:%M:%S')} - {item.content}") # item.content[:50] for putting a limit of 50 characters
 
     def show_context_menu(self, position):
+        item = self.list_widget.itemAt(position)
+        if item:
+            self.list_widget.setCurrentItem(item)
+        else:
+            return
+
         menu = QMenu()
         copy_action = menu.addAction("Copy to Clipboard")
         action = menu.exec(self.list_widget.viewport().mapToGlobal(position))

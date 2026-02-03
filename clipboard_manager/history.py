@@ -12,6 +12,7 @@ class HistoryStore:
         self.items = []
         self._recent_hashes = OrderedDict()
         self._last_seen_by_app = {}
+        self._items_by_id = {}
 
     def add_item(self, content, source_app="Unknown App", timestamp=None):
         if not content:
@@ -45,6 +46,10 @@ class HistoryStore:
             except Exception:
                 pass
         self.items.insert(0, item)
+        try:
+            self._items_by_id[item.id] = item
+        except Exception:
+            pass
 
         try:
             if h in self._recent_hashes:
@@ -58,6 +63,9 @@ class HistoryStore:
         self._last_seen_by_app[(source_app, h)] = now
 
         return item
+
+    def get_item_by_id(self, item_id):
+        return self._items_by_id.get(item_id)
 
     def get_apps(self):
         return sorted(set(item.source_app for item in self.items))

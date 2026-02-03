@@ -109,9 +109,13 @@ class MainWindow(QMainWindow):
         selected_app = self.app_dropdown.currentText()
         if not selected_app:
             return
+        from PyQt6.QtWidgets import QListWidgetItem
         items = self.history.get_items_by_app(selected_app)
         for item in items:
-            self.list_widget.addItem(f"{item.timestamp.strftime('%H:%M:%S')} - {item.content}")
+            label = f"{item.timestamp.strftime('%H:%M:%S')} - {item.content}"
+            list_item = QListWidgetItem(label)
+            list_item.setData(Qt.ItemDataRole.UserRole, item.id)
+            self.list_widget.addItem(list_item)
 
     def show_context_menu(self, position):
         item = self.list_widget.itemAt(position)
@@ -124,15 +128,18 @@ class MainWindow(QMainWindow):
         copy_action = menu.addAction("Copy to Clipboard")
         action = menu.exec(self.list_widget.viewport().mapToGlobal(position))
         if action == copy_action:
-            selected_row = self.list_widget.currentRow()
-            selected_app = self.app_dropdown.currentText()
-            items = self.history.get_items_by_app(selected_app)
-            if selected_row != -1:
-                content = items[selected_row].content
-                self.pause_status_label.setText(f'Paused ({self._pause_ms} ms)')
-                self.pause_status_label.setVisible(True)
-                self.watcher.set_text(content, pause_ms=self._pause_ms)
-                self.pause_status_label.setVisible(False)
+            lw_item = self.list_widget.currentItem()
+            if lw_item is None:
+                return
+            item_id = lw_item.data(Qt.ItemDataRole.UserRole)
+            item_obj = self.history.get_item_by_id(item_id)
+            if item_obj is None:
+                return
+            content = item_obj.content
+            self.pause_status_label.setText(f'Paused ({self._pause_ms} ms)')
+            self.pause_status_label.setVisible(True)
+            self.watcher.set_text(content, pause_ms=self._pause_ms)
+            self.pause_status_label.setVisible(False)
 
     def _pause_clipboard_capture(self, ms=None):
         if ms is None:

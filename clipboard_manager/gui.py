@@ -35,6 +35,10 @@ class MainWindow(QMainWindow):
         self.pause_spin.valueChanged.connect(self._on_pause_spin_changed)
         pause_layout.addWidget(pause_label)
         pause_layout.addWidget(self.pause_spin)
+        self.pause_status_label = QLabel('')
+        self.pause_status_label.setStyleSheet('color: red; font-weight: bold;')
+        self.pause_status_label.setVisible(False)
+        pause_layout.addWidget(self.pause_status_label)
         layout.addLayout(pause_layout)
         layout.addWidget(self.app_dropdown)
         layout.addWidget(self.list_widget)
@@ -62,10 +66,20 @@ class MainWindow(QMainWindow):
         if ms is None:
             ms = self._pause_ms
         self._ignore_clipboard = True
+        try:
+            self.pause_status_label.setText(f'Paused ({ms} ms)')
+            self.pause_status_label.setVisible(True)
+        except Exception:
+            pass
         QTimer.singleShot(ms, self._resume_clipboard_capture)
 
     def _resume_clipboard_capture(self):
         self._ignore_clipboard = False
+        try:
+            self.pause_status_label.setVisible(False)
+            self.pause_status_label.setText('')
+        except Exception:
+            pass
 
     def _on_pause_spin_changed(self, value: int):
         self._pause_ms = int(value)

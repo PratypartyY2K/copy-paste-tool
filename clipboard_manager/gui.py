@@ -48,27 +48,6 @@ class MainWindow(QMainWindow):
         self.watcher = ClipboardWatcher()
         self.watcher.clipboard_changed.connect(self._on_clipboard_event)
 
-    @property
-    def _ignore_clipboard(self):
-        try:
-            return bool(self.watcher._ignore)
-        except Exception:
-            return False
-
-    @_ignore_clipboard.setter
-    def _ignore_clipboard(self, val):
-        try:
-            self.watcher._ignore = bool(val)
-        except Exception:
-            pass
-
-    @property
-    def clipboard(self):
-        try:
-            return self.watcher.clipboard
-        except Exception:
-            return None
-
     def _on_clipboard_event(self, content: str, source_app: str, timestamp: float):
         # Delegate to history store and update UI
         item = self.history.add_item(content, source_app=source_app, timestamp=timestamp)
@@ -78,21 +57,6 @@ class MainWindow(QMainWindow):
 
     def _on_pause_spin_changed(self, value: int):
         self._pause_ms = int(value)
-
-    def check_clipboard(self):
-        try:
-            text = self.clipboard.text()
-        except Exception:
-            return
-        if not text:
-            return
-        source_app = None
-        try:
-            from utils import get_frontmost_app
-            source_app = get_frontmost_app()
-        except Exception:
-            source_app = 'Unknown App'
-        self._on_clipboard_event(text, source_app, __import__('time').time())
 
     def update_apps_dropdown(self):
         apps = self.history.get_apps()
@@ -140,21 +104,3 @@ class MainWindow(QMainWindow):
             self.pause_status_label.setVisible(True)
             self.watcher.set_text(content, pause_ms=self._pause_ms)
             self.pause_status_label.setVisible(False)
-
-    def _pause_clipboard_capture(self, ms=None):
-        if ms is None:
-            ms = self._pause_ms
-        try:
-            self.pause_status_label.setText(f'Paused ({ms} ms)')
-            self.pause_status_label.setVisible(True)
-        except Exception:
-            pass
-        self.watcher.pause(ms)
-
-    def _resume_clipboard_capture(self):
-        try:
-            self.pause_status_label.setVisible(False)
-            self.pause_status_label.setText('')
-        except Exception:
-            pass
-        self.watcher.resume()

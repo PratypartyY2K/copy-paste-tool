@@ -3,6 +3,7 @@ from collections import OrderedDict
 import hashlib
 import time
 from datetime import datetime
+from boards import BoardRouter
 
 MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30
@@ -39,7 +40,13 @@ class HistoryStore:
             self._last_seen_by_app[(source_app, h)] = now
             return None
 
+        # Create item and assign board using BoardRouter
         item = ClipboardItem(content, source_app)
+        try:
+            BoardRouter.assign_board_to_item(item)
+        except Exception:
+            pass
+
         if timestamp is not None:
             try:
                 item.timestamp = datetime.fromtimestamp(timestamp)

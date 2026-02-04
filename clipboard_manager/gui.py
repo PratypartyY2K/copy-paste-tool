@@ -1,12 +1,12 @@
-from PyQt6.QtWidgets import QApplication, QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout
 from history import History
 from watcher import ClipboardWatcher
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__()
+        super(MainWindow, self).__init__()
         self.setWindowTitle("App-Aware Clipboard Manager")
         self.setGeometry(100, 100, 600, 400)
 
@@ -76,7 +76,7 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QListWidgetItem
         items = self.history.get_items_by_app(selected_app)
         for item in items:
-            label = f"{item.timestamp.strftime('%H:%M:%S')} - {item.content}"
+            label = "%s - [%s] %s" % (item.timestamp.strftime('%H:%M:%S'), getattr(item.board, 'value', 'other'), item.content)
             list_item = QListWidgetItem(label)
             list_item.setData(Qt.ItemDataRole.UserRole, item.id)
             self.list_widget.addItem(list_item)
@@ -100,7 +100,7 @@ class MainWindow(QMainWindow):
             if item_obj is None:
                 return
             content = item_obj.content
-            self.pause_status_label.setText(f'Paused ({self._pause_ms} ms)')
+            self.pause_status_label.setText('Paused (%d ms)' % (self._pause_ms,))
             self.pause_status_label.setVisible(True)
             self.watcher.set_text(content, pause_ms=self._pause_ms)
             self.pause_status_label.setVisible(False)

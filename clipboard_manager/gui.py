@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout
-from history import History
-from watcher import ClipboardWatcher
+from clipboard_manager.history import History
+from clipboard_manager.watcher import ClipboardWatcher
+from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -90,8 +91,15 @@ class MainWindow(QMainWindow):
 
         menu = QMenu()
         copy_action = menu.addAction("Copy to Clipboard")
+        trim_action = menu.addAction("Trim whitespace")
+        oneline_action = menu.addAction("Copy as one-line")
+        extract_urls_action = menu.addAction("Extract URLs")
+        json_action = menu.addAction("JSON-escape")
+        camel_action = menu.addAction("Convert to camelCase")
+        snake_action = menu.addAction("Convert to snake_case")
+
         action = menu.exec(self.list_widget.viewport().mapToGlobal(position))
-        if action == copy_action:
+        if action in (copy_action, trim_action, oneline_action, extract_urls_action, json_action, camel_action, snake_action):
             lw_item = self.list_widget.currentItem()
             if lw_item is None:
                 return
@@ -99,8 +107,27 @@ class MainWindow(QMainWindow):
             item_obj = self.history.get_item_by_id(item_id)
             if item_obj is None:
                 return
-            content = item_obj.content
+            original = item_obj.content
+
+            if action == copy_action:
+                out = original
+            elif action == trim_action:
+                out = trim_whitespace(original)
+            elif action == oneline_action:
+                out = copy_one_line(original)
+            elif action == extract_urls_action:
+                out = extract_urls_text(original)
+            elif action == json_action:
+                out = json_escape(original)
+            elif action == camel_action:
+                out = to_camel_case(original)
+            elif action == snake_action:
+                out = to_snake_case(original)
+            else:
+                out = original
+
+            # set clipboard text while pausing capture briefly
             self.pause_status_label.setText('Paused (%d ms)' % (self._pause_ms,))
             self.pause_status_label.setVisible(True)
-            self.watcher.set_text(content, pause_ms=self._pause_ms)
+            self.watcher.set_text(out, pause_ms=self._pause_ms)
             self.pause_status_label.setVisible(False)

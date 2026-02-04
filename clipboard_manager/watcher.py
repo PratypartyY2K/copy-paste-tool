@@ -1,13 +1,13 @@
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 from PyQt6.QtWidgets import QApplication
-from utils import get_frontmost_app
+from clipboard_manager.utils import get_frontmost_app
 import time
 
 class ClipboardWatcher(QObject):
     clipboard_changed = pyqtSignal(str, str, float)
 
     def __init__(self, parent=None):
-        super().__init__(parent)
+        super(ClipboardWatcher, self).__init__(parent)
         self.clipboard = QApplication.clipboard()
         self.clipboard.dataChanged.connect(self._on_clipboard_change)
         self._ignore = False

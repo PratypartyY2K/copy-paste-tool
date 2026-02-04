@@ -1,9 +1,9 @@
-from clipboard_item import ClipboardItem
+from clipboard_manager.clipboard_item import ClipboardItem
 from collections import OrderedDict
 import hashlib
 import time
 from datetime import datetime
-from boards import BoardRouter
+from clipboard_manager.boards import BoardRouter
 
 MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30

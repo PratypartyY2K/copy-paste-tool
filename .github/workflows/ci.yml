@@ -1,4 +1,5 @@
 name: CI
+
 permissions:
   pull-requests: write
   contents: read
@@ -8,6 +9,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -154,3 +156,72 @@ jobs:
                 body
               });
             }
+
+  gui:
+    name: GUI tests (macOS)
+    runs-on: macos-latest
+    env:
+      COVERAGE_MIN: 70
+    strategy:
+      matrix:
+        python-version: [3.11]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip and wheelhouse (macOS)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ./.wheelhouse-macos
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-ci.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
+      - name: Build wheelhouse (macOS)
+        run: |
+          mkdir -p ./.wheelhouse-macos
+          python -m pip install --upgrade pip
+          if [ -z "$(ls -A ./.wheelhouse-macos)" ]; then
+            echo "Building wheelhouse for macOS..."
+            python -m pip wheel --wheel-dir ./.wheelhouse-macos -r requirements-ci.txt || true
+          else
+            echo "Using cached macOS wheelhouse"
+          fi
+
+      - name: Install python dependencies from wheelhouse (macOS)
+        run: |
+          set -eux
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -d ./.wheelhouse-macos ] && [ "$(ls -A ./.wheelhouse-macos)" ]; then
+            python -m pip install --find-links ./.wheelhouse-macos -r requirements-ci.txt
+          else
+            python -m pip install -r requirements-ci.txt
+          fi
+
+      - name: Run GUI tests on macOS
+        run: |
+          python -m pytest -q -m gui --cov=clipboard_manager --cov-report=xml
+
+      - name: Upload GUI coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gui-coverage-xml
+          path: coverage.xml
+
+      - name: Upload GUI coverage to Codecov
+        if: always() && env.CODECOV_TOKEN
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+

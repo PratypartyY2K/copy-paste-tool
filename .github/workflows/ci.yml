@@ -45,22 +45,28 @@ jobs:
         run: |
           xvfb-run -s "-screen 0 1920x1080x24" python -m pytest -q --cov=clipboard_manager --cov-report=xml --cov-fail-under=${{ env.COVERAGE_MIN }}
 
+      - name: Check for coverage.xml
+        id: covcheck
+        run: |
+          if [ -f coverage.xml ]; then echo "coverage_exists=true" >> $GITHUB_OUTPUT; else echo "coverage_exists=false" >> $GITHUB_OUTPUT; fi
+
       - name: Upload coverage report
-        if: always()
+        if: steps.covcheck.outputs.coverage_exists == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: coverage-xml
           path: coverage.xml
 
       - name: Upload coverage to Codecov
-        if: always()
+        if: steps.covcheck.outputs.coverage_exists == 'true'
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
-          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
       - name: Comment coverage on PR
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' && steps.covcheck.outputs.coverage_exists == 'true' }}
         uses: actions/github-script@v6
         with:
           env: |

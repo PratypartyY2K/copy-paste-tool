@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout, QCheckBox, QPushButto
 from PyQt6.QtGui import QShortcut, QKeySequence
 from clipboard_manager.history import History
 from clipboard_manager.watcher import ClipboardWatcher
-from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case
+from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case, fuzzy_score, highlight_match
 from PyQt6.QtCore import QTimer
 
 
@@ -136,19 +136,34 @@ class MainWindow(QMainWindow):
         selected_app = self.app_dropdown.currentText()
         if not selected_app:
             return
-        filter_text = self.search_box.text().lower().strip()
+        filter_text = self.search_box.text().strip()
         from PyQt6.QtWidgets import QListWidgetItem
         items = self.history.get_items_by_app(selected_app)
+        scored = []
         for item in items:
-            if filter_text:
-                if filter_text not in item.content.lower() and filter_text not in getattr(item.board, 'value', '').lower():
-                    continue
-            label = "%s - [%s] %s" % (item.timestamp.strftime('%H:%M:%S'), getattr(item.board, 'value', 'other'), item.content)
-            list_item = QListWidgetItem(label)
+            if not filter_text:
+                score = 100
+            else:
+                score = fuzzy_score(item.content, filter_text)
+            if score <= 0:
+                continue
+            scored.append((score, item))
+        scored.sort(key=lambda x: (-x[0], not getattr(x[1], 'pinned', False), x[1].timestamp),)
+        for score, item in scored:
+            label_html = highlight_match(item.content, filter_text)
+            timestamp = item.timestamp.strftime('%H:%M:%S')
+            board = getattr(item.board, 'value', 'other')
+            html = '<span style="color: gray; font-size: 10px">%s</span> - <span style="font-weight: bold;">[%s]</span> %s' % (timestamp, board, label_html)
+            list_item = QListWidgetItem()
             list_item.setData(Qt.ItemDataRole.UserRole, item.id)
             if getattr(item, 'pinned', False):
-                list_item.setText('[PIN] ' + list_item.text())
+                html = '<span style="color: green; font-weight: bold;">[PIN]</span> ' + html
             self.list_widget.addItem(list_item)
+            label_widget = QLabel()
+            label_widget.setTextFormat(Qt.TextFormat.RichText)
+            label_widget.setText(html)
+            label_widget.setWordWrap(True)
+            self.list_widget.setItemWidget(list_item, label_widget)
 
     def show_context_menu(self, position):
         item = self.list_widget.itemAt(position)

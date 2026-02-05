@@ -3,6 +3,14 @@ import re
 import json
 from typing import List
 
+# fuzzy search helpers
+try:
+    from rapidfuzz import fuzz as _rfuzz
+except Exception:
+    _rfuzz = None
+
+from html import escape as _html_escape
+
 def get_frontmost_app():
     try:
         script = 'tell application "System Events" to get name of first application process whose frontmost is true'
@@ -11,6 +19,49 @@ def get_frontmost_app():
         return app_name
     except Exception as e:
         return "Unknown App"
+
+def fuzzy_score(text: str, query: str) -> int:
+    """Return a 0-100 fuzzy match score between text and query.
+    Uses rapidfuzz if available, otherwise falls back to substring membership.
+    """
+    if not query:
+        return 100
+    if not text:
+        return 0
+    q = query.strip()
+    if not q:
+        return 100
+    if _rfuzz is not None:
+        try:
+            return int(_rfuzz.partial_ratio(q, text))
+        except Exception:
+            pass
+    # fallback: simple case-insensitive substring check
+    return 100 if q.lower() in text.lower() else 0
+
+def highlight_match(text: str, query: str) -> str:
+    """Return HTML-safe text with query occurrences highlighted using <b> tags.
+    If query is empty or not found, returns escaped text.
+    This is a simple substring highlighter; fuzzy ranking may still rank items higher.
+    """
+    if not query or not text:
+        return _html_escape(text or '')
+    q = re.escape(query.strip())
+    if not q:
+        return _html_escape(text)
+    pattern = re.compile(r'(' + q + r')', re.IGNORECASE)
+    def _repl(m):
+        return '<b>' + _html_escape(m.group(1)) + '</b>'
+    parts = pattern.split(text)
+    if len(parts) == 1:
+        return _html_escape(text)
+    out = []
+    for i, p in enumerate(parts):
+        if i % 2 == 1:
+            out.append('<b>' + _html_escape(p) + '</b>')
+        else:
+            out.append(_html_escape(p))
+    return ''.join(out)
 
 def trim_whitespace(text: str) -> str:
     """Trim leading/trailing whitespace."""

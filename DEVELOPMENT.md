@@ -22,7 +22,7 @@ python -m pip install --upgrade pip setuptools wheel
 2. Install runtime/test dependencies (PyQt6 and pytest are required for the GUI tests):
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-ci.txt
 ```
 
 3. Run the app locally (with venv active):
@@ -35,7 +35,8 @@ CI and coverage
 ----------------
 This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
 - CI runs `pytest` in a headless environment using `xvfb` so GUI tests (pytest-qt) run reliably.
-- The workflow enforces a minimum coverage threshold (set to 70% by default). If coverage falls below this value the CI will fail.
+- The workflow builds and caches a local wheelhouse to speed CI installs.
+- Coverage reports are uploaded to Codecov. If your repository requires a Codecov upload token, set the `CODECOV_TOKEN` repository secret.
 
 Running tests locally
 ---------------------
@@ -74,7 +75,7 @@ You can emulate CI locally by running tests under Xvfb and ensuring the same dep
 xvfb-run -s "-screen 0 1920x1080x24" pytest -q --cov=clipboard_manager --cov-report=xml
 ```
 
-If tests behave differently in CI, check `requirements.txt` and system packages (Xvfb) in the runner.
+If tests behave differently in CI, check `requirements-ci.txt` and system packages (Xvfb, mesa libs) in the runner.
 
 Coding style & conventions
 -------------------------
@@ -88,4 +89,4 @@ Adding tests
 - Add pytest test files under `tests/` using `test_*.py` naming.
 - GUI tests may use `pytest-qt` fixtures (e.g., `qtbot`) to manage widgets and event loops.
 
-Last updated: 2026-02-04
+Last updated: 2026-02-05

@@ -1,6 +1,6 @@
 # App-Aware Clipboard Manager
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![codecov](https://codecov.io/gh/pratyushkumar/copy-paste-tool/branch/main/graph/badge.svg?token=)](https://codecov.io/gh/pratyushkumar/copy-paste-tool)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![CI](https://github.com/PratypartyY2K/copy-paste-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/PratypartyY2K/copy-paste-tool/actions) [![Codecov](https://codecov.io/gh/PratypartyY2K/copy-paste-tool/branch/main/graph/badge.svg)](https://codecov.io/gh/PratypartyY2K/copy-paste-tool)
 
 A lightweight, macOS-focused clipboard manager built with PyQt6. It captures text copies, attributes them to the source application, and presents an app-aware UI with advanced developer-friendly utilities.
 
@@ -171,14 +171,15 @@ This repository includes a GitHub Actions workflow that runs the test suite and 
 
 - Workflow file: `.github/workflows/ci.yml`
 - Coverage requirement: the CI enforces a minimum coverage (default set to 70%). The workflow runs tests in a headless environment using `xvfb` so GUI tests (pytest-qt) run reliably.
+- Coverage reports are uploaded to Codecov. See the Codecov badge at the top of this README for the latest project coverage.
 
 Run tests locally with coverage (recommended):
 
 ```bash
 # install test deps from repo
-python3 -m pip install -r requirements.txt
+python3 -m pip install -r requirements-ci.txt
 # run pytest with coverage
-pytest --cov=clipboard_manager --cov-report=term-missing
+pytest -q -m "not gui" --cov=clipboard_manager --cov-report=term-missing
 ```
 
 If you want to run GUI tests locally in an environment without a display, use Xvfb (Linux) or run on macOS directly:

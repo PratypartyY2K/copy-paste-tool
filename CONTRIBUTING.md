@@ -24,14 +24,26 @@ CI and test expectations
 ------------------------
 - This repository runs tests in GitHub Actions (`.github/workflows/ci.yml`). The CI runs GUI tests under Xvfb so pytest-qt tests run in headless CI environments.
 - The CI enforces a minimum coverage threshold (default 70%). Make sure your changes are covered by unit tests or GUI tests to avoid CI failures.
+- Coverage reports are uploaded to Codecov; a Codecov badge is included in the README.
+
+Codecov token (required for uploads)
+-----------------------------------
+If this repository is private, or if Codecov requires a token for uploads, create a repository secret named `CODECOV_TOKEN`:
+
+1. In the Codecov project settings copy the upload token.
+2. In GitHub: Settings → Secrets and variables → Actions → New repository secret
+   - Name: CODECOV_TOKEN
+   - Value: (paste the token)
+
+If the token is missing, the CI step that uploads coverage to Codecov will be skipped or report an error; set the secret and re-run the workflow.
 
 Run pytest locally (recommended)
 -------------------------------
 Install pytest and GUI test deps and run tests with coverage:
 
 ```bash
-python -m pip install -r requirements.txt
-pytest --cov=clipboard_manager --cov-report=term-missing
+python -m pip install -r requirements-ci.txt
+pytest -q -m "not gui" --cov=clipboard_manager --cov-report=term-missing
 ```
 
 If you want to emulate CI locally (headless), run with Xvfb:
@@ -70,4 +82,4 @@ Contact
 -------
 If you need help or want to discuss architecture, open an issue or a draft PR and invite reviewers.
 
-Last updated: 2026-02-04
+Last updated: 2026-02-05

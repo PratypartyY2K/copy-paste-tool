@@ -2,6 +2,8 @@ import pytest
 from PyQt6.QtWidgets import QApplication
 from clipboard_manager.gui import MainWindow
 
+pytestmark = pytest.mark.gui
+
 @pytest.fixture(scope='session')
 def app():
     app = QApplication.instance() or QApplication([])

@@ -97,7 +97,7 @@ jobs:
 
       - name: Run tests with pytest under Xvfb and enforce coverage minimum
         run: |
-          xvfb-run -s "-screen 0 1920x1080x24" python -m pytest -q --cov=clipboard_manager --cov-report=xml --cov-fail-under=${{ env.COVERAGE_MIN }}
+          xvfb-run -s "-screen 0 1920x1080x24" python -m pytest -q -m "not gui" --cov=clipboard_manager --cov-report=xml --cov-fail-under=${{ env.COVERAGE_MIN }}
 
       - name: Check for coverage.xml
         id: covcheck

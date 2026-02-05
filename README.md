@@ -212,13 +212,3 @@ Contributing
 License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
----
-
-Changelog / last updated
-- README updated: 2026-02-04 — expanded installation, features, secret-safe and pins/search docs.
-
-If you'd like I can also:
-- Add persistent storage (JSON/SQLite) and a toggle in the UI to enable it.
-- Add preferences to persist Secret-safe and blocklist settings to disk.
-- Add more tests for board routing heuristics.

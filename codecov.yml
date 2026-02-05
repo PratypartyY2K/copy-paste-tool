@@ -1,0 +1,38 @@
+# Codecov configuration for copy-paste-tool
+# Controls project and patch coverage thresholds and PR comment layout.
+
+codecov:
+  require_ci_to_pass: yes
+
+coverage:
+  precision: 2
+  round: down
+  status:
+    project:
+      default:
+        # target % to aim for (informational)
+        target: 80
+        # allowed deviation before failing CI (0 = fail if below target)
+        threshold: 0
+    patch:
+      default:
+        # For PRs, require at least this percentage overall on the patch
+        target: 70
+        threshold: 0
+
+# Files/paths to ignore from coverage reports (globs)
+ignore:
+  - "tests/**"
+  - "**/__pycache__/**"
+  - "clipboard_manager/main.py"
+
+# PR comment behavior
+comment:
+  layout:
+    - "reach"
+    - "diff"
+    - "files"
+  behavior: default
+
+# Optional: Do not use flags for now
+flags: {}

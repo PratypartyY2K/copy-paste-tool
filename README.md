@@ -1,6 +1,6 @@
 # App-Aware Clipboard Manager
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![CI](https://github.com/your-org/your-repo/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/your-repo/actions) [![codecov](https://codecov.io/gh/your-org/your-repo/branch/main/graph/badge.svg?token=)](https://codecov.io/gh/your-org/your-repo)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![codecov](https://codecov.io/gh/pratyushkumar/copy-paste-tool/branch/main/graph/badge.svg?token=)](https://codecov.io/gh/pratyushkumar/copy-paste-tool)
 
 A lightweight, macOS-focused clipboard manager built with PyQt6. It captures text copies, attributes them to the source application, and presents an app-aware UI with advanced developer-friendly utilities.
 

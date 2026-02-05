@@ -33,6 +33,10 @@ Pull request checklist
 - [ ] Add/update documentation (README/DEVELOPMENT.md/PERSISTENCE.md) as needed.
 - [ ] Ensure no secrets (API keys, credentials) are committed.
 
+License and contribution rights
+-------------------------------
+This project is released under the MIT License. By submitting a pull request you agree to license your contribution under the same MIT License and grant the project maintainers the right to incorporate your changes under that license. See the `LICENSE` file in the repository root for the full license text.
+
 Review process
 --------------
 - PRs are reviewed by maintainers. Expect feedback and iterations.
@@ -42,9 +46,10 @@ Branching
 ---------
 - `main` holds the latest stable code. Create feature branches off `main` and open PRs against `main`.
 
-License and contribution rights
--------------------------------
-By opening a pull request you agree to license your contribution under the repository's license. If you want a different arrangement, state it clearly when opening the PR.
+Contributing
+------------
+- Create a branch, add tests for behavior changes (HistoryStore unit tests are quick), run the test scripts, and open a PR.
+- Helpful areas: persist history, image/rich clipboard support, improve token heuristics, better search (fuzzy matching), keyboard shortcuts.
 
 Contact
 -------

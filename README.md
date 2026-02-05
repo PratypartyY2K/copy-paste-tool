@@ -1,5 +1,7 @@
 # App-Aware Clipboard Manager
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 A lightweight, macOS-focused clipboard manager built with PyQt6. It captures text copies, attributes them to the source application, and presents an app-aware UI with advanced developer-friendly utilities.
 
 This README covers: installation, key features (Boards, Secret-safe mode, Pins, Search, Clip Actions), usage, configuration, developer notes, and troubleshooting.
@@ -161,3 +163,17 @@ Contributing
 
 - Create a branch, add tests for behavior changes (HistoryStore unit tests are quick), run the test scripts, and open a PR.
 - Helpful areas: persist history, image/rich clipboard support, improve token heuristics, better search (fuzzy matching), keyboard shortcuts.
+
+License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+---
+
+Changelog / last updated
+- README updated: 2026-02-04 — expanded installation, features, secret-safe and pins/search docs.
+
+If you'd like I can also:
+- Add persistent storage (JSON/SQLite) and a toggle in the UI to enable it.
+- Add preferences to persist Secret-safe and blocklist settings to disk.
+- Add more tests for board routing heuristics.

@@ -6,6 +6,7 @@ from clipboard_manager.history import History
 from clipboard_manager.watcher import ClipboardWatcher
 from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case
 
+
 class BlocklistEditor(QDialog):
     def __init__(self, parent=None, initial_blocklist=None):
         super(BlocklistEditor, self).__init__(parent)
@@ -28,6 +29,7 @@ class BlocklistEditor(QDialog):
         txt = self.text.toPlainText()
         return [line.strip() for line in txt.splitlines() if line.strip()]
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -37,7 +39,6 @@ class MainWindow(QMainWindow):
         self.history = History()
         self._pause_ms = 500
 
-        # Secret-safe controls
         ss_layout = QHBoxLayout()
         self.secret_safe_checkbox = QCheckBox('Secret-safe mode')
         self.secret_safe_checkbox.setChecked(self.history.get_secret_safe_enabled())
@@ -47,21 +48,17 @@ class MainWindow(QMainWindow):
         self.edit_blocklist_btn.clicked.connect(self._on_edit_blocklist)
         ss_layout.addWidget(self.edit_blocklist_btn)
 
-        # Dropdown for recent apps
         self.app_dropdown = QComboBox()
         self.app_dropdown.currentIndexChanged.connect(self.update_list)
 
-        # List widget for clipboard items
         self.list_widget = QListWidget()
         self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list_widget.customContextMenuRequested.connect(self.show_context_menu)
 
-        # Search box
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText('Search current app/board...')
         self.search_box.textChanged.connect(self.update_list)
 
-        # Layout
         layout = QVBoxLayout()
         pause_layout = QHBoxLayout()
         pause_label = QLabel('Pause (ms):')
@@ -85,16 +82,13 @@ class MainWindow(QMainWindow):
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-        # Hotkey: Ctrl+` to show window and focus search
         shortcut = QShortcut(QKeySequence('Ctrl+`'), self)
         shortcut.activated.connect(self._on_hotkey_open)
 
-        # Watcher: signal-based clipboard event emitter
         self.watcher = ClipboardWatcher()
         self.watcher.clipboard_changed.connect(self._on_clipboard_event)
 
     def _on_clipboard_event(self, content: str, source_app: str, timestamp: float):
-        # Delegate to history store and update UI
         item = self.history.add_item(content, source_app=source_app, timestamp=timestamp)
         if item is not None:
             self.update_apps_dropdown()
@@ -122,14 +116,12 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QListWidgetItem
         items = self.history.get_items_by_app(selected_app)
         for item in items:
-            # filter by search
             if filter_text:
                 if filter_text not in item.content.lower() and filter_text not in getattr(item.board, 'value', '').lower():
                     continue
             label = "%s - [%s] %s" % (item.timestamp.strftime('%H:%M:%S'), getattr(item.board, 'value', 'other'), item.content)
             list_item = QListWidgetItem(label)
             list_item.setData(Qt.ItemDataRole.UserRole, item.id)
-            # style pinned items differently (prefix)
             if getattr(item, 'pinned', False):
                 list_item.setText('[PIN] ' + list_item.text())
             self.list_widget.addItem(list_item)
@@ -189,7 +181,6 @@ class MainWindow(QMainWindow):
                 self.update_list()
                 return
 
-            # set clipboard text while pausing capture briefly
             self.pause_status_label.setText('Paused (%d ms)' % (self._pause_ms,))
             self.pause_status_label.setVisible(True)
             self.watcher.set_text(out, pause_ms=self._pause_ms)

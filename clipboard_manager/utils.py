@@ -12,8 +12,6 @@ def get_frontmost_app():
     except Exception as e:
         return "Unknown App"
 
-# Clip action utilities
-
 def trim_whitespace(text: str) -> str:
     """Trim leading/trailing whitespace."""
     if text is None:
@@ -33,7 +31,6 @@ def extract_urls(text: str) -> List[str]:
     if not text:
         return []
     found = _URL_RE.findall(text)
-    # dedupe while preserving order
     seen = set()
     out = []
     for u in found:

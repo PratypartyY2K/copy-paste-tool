@@ -9,14 +9,11 @@ import re
 
 MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30
-# Default temporary storage seconds for token-like clipboard captures
 TEMPORARY_TOKEN_SECONDS = 30
-# Default apps to block entirely from being stored (password managers, authenticators, keychain UIs)
 BLOCKLIST_DEFAULTS = {
     '1password', '1password 8', 'lastpass', 'bitwarden', 'dashlane', 'keepassxc', 'keepass', 'google authenticator', 'authy', 'keychain', 'password manager'
 }
 
-# Simple token/JWT heuristics
 _JWT_RE = re.compile(r"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$")
 _LONG_BASE64_RE = re.compile(r"^[A-Za-z0-9-_]{40,}$")
 
@@ -30,7 +27,6 @@ class HistoryStore:
         self._cleanup_thread = None
         self._cleanup_event = threading.Event()
 
-        # Secret-safe configuration (instance-level)
         self.secret_safe_enabled = True
         self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
 
@@ -42,7 +38,6 @@ class HistoryStore:
     def set_blocklist(self, entries):
         """Replace blocklist with an iterable of strings."""
         with self._lock:
-            # normalize to lower-case substrings for matching
             self.blocklist_apps = set(e.strip().lower() for e in entries if e and e.strip())
 
     def set_secret_safe_enabled(self, enabled: bool):
@@ -61,7 +56,6 @@ class HistoryStore:
         self._cleanup_thread.start()
 
     def _cleanup_loop(self):
-        # Run until the event is set
         while not self._cleanup_event.wait(timeout=2.0):
             now = time.time()
             removed = False
@@ -93,13 +87,11 @@ class HistoryStore:
             return True
         if _LONG_BASE64_RE.match(t):
             return True
-        # tokens often have lots of punctuation-free long sequences
         return False
 
     def _is_blocked_app(self, app_name: str) -> bool:
         if not app_name:
             return False
-        # If secret-safe mode is disabled, never block
         if not self.secret_safe_enabled:
             return False
         n = app_name.lower()
@@ -112,7 +104,6 @@ class HistoryStore:
         if not content:
             return None
 
-        # Blocklist apps entirely
         if self._is_blocked_app(source_app):
             return None
 
@@ -138,11 +129,9 @@ class HistoryStore:
                 self._last_seen_by_app[(source_app, h)] = now
                 return None
 
-            # Create item and assign board using BoardRouter
             is_temp = False
             expire_at = None
             if self.secret_safe_enabled and self._looks_like_token(content):
-                # Token-like content -> mark temporary
                 is_temp = True
                 expire_at = now + TEMPORARY_TOKEN_SECONDS
 
@@ -158,16 +147,12 @@ class HistoryStore:
                 except Exception:
                     pass
 
-            # Insert at front
-            # Maintain pinned items at the top. Insert new item at top of its group.
             if getattr(item, 'pinned', False):
-                # find first non-pinned index
                 idx = 0
                 while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
                     idx += 1
                 self.items.insert(idx, item)
             else:
-                # insert after pinned items
                 idx = 0
                 while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
                     idx += 1
@@ -188,7 +173,6 @@ class HistoryStore:
 
             self._last_seen_by_app[(source_app, h)] = now
 
-            # Start cleanup thread if needed
             if is_temp:
                 self._start_cleanup_thread()
 
@@ -212,10 +196,8 @@ class HistoryStore:
             if not item:
                 return False
             item.pinned = True
-            # move item to the pinned area top
             try:
                 self.items = [i for i in self.items if i.id != item_id]
-                # insert at end of pinned area
                 idx = 0
                 while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
                     idx += 1
@@ -230,14 +212,11 @@ class HistoryStore:
             if not item:
                 return False
             item.pinned = False
-            # move item after pinned area (to the top of non-pinned group)
             try:
                 self.items = [i for i in self.items if i.id != item_id]
-                # compute insertion index: after pinned items, but keep newer non-pinned items before it
                 idx = 0
                 while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
                     idx += 1
-                # advance past items that are newer than the item (so most recent items stay first)
                 while idx < len(self.items) and self.items[idx].timestamp > item.timestamp:
                     idx += 1
                 self.items.insert(idx, item)

@@ -8,12 +8,9 @@ class ClipboardItem:
         self.content = content
         self.source_app = source_app
         self.timestamp = datetime.now()
-        # If board not provided default to OTHER to ensure attribute exists
         self.board = board or Board.OTHER
-        # Temporary items (e.g., tokens) can be marked and will be auto-removed
         self.is_temporary = is_temporary
         self.expire_at = expire_at
-        # Pin flag keeps an item at the top of a view
         self.pinned = pinned
 
     def __repr__(self):

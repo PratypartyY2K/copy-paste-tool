@@ -68,16 +68,29 @@ jobs:
           python -m pip install --upgrade pip
           if [ -z "$(ls -A ./.wheelhouse)" ]; then
             echo "Building wheelhouse..."
-            python -m pip wheel --no-deps --wheel-dir ./.wheelhouse -r requirements.txt || true
+            # Build wheels for all requirements and their dependencies into the wheelhouse
+            python -m pip wheel --wheel-dir ./.wheelhouse -r requirements.txt || true
           else
             echo "Using cached wheelhouse"
           fi
 
       - name: Install python dependencies from wheelhouse
         run: |
-          python -m pip install --upgrade pip
-          # Prefer wheels from the local wheelhouse; fall back to PyPI if a wheel is missing
-          python -m pip install --no-deps --find-links ./.wheelhouse -r requirements.txt || python -m pip install -r requirements.txt
+          set -eux
+          python -m pip install --upgrade pip setuptools wheel
+          # Prefer wheels from the local wheelhouse when available; otherwise install from PyPI
+          if [ -d ./.wheelhouse ] && [ "$(ls -A ./.wheelhouse)" ]; then
+            # Install using local wheelhouse; allow dependency resolution so sub-dependencies (e.g., pluggy) are installed
+            python -m pip install --find-links ./.wheelhouse -r requirements.txt
+          else
+            python -m pip install -r requirements.txt
+          fi
+          # Verify critical test deps are installed; fail early with diagnostics if not
+          if ! python -c "import pytest, pluggy" 2>/dev/null; then
+            echo 'ERROR: pytest or pluggy not installed; listing installed packages:' >&2
+            python -m pip list
+            exit 1
+          fi
 
       - name: Run tests with pytest under Xvfb and enforce coverage minimum
         run: |

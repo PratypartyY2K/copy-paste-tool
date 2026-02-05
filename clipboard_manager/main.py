@@ -24,4 +24,11 @@ if __name__ == "__main__":
     else:
         window = MainWindow()
     window.show()
-    sys.exit(app.exec())
+    rc = app.exec()
+    # Ensure persistence is properly closed on exit
+    try:
+        if persistence:
+            persistence.close()
+    except Exception:
+        pass
+    sys.exit(rc)

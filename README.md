@@ -136,8 +136,23 @@ Configuration constants in `clipboard_manager/history.py`:
 Secret-safe blocklist
 - Edit blocklist from the UI (Edit Blocklist) or programmatically via `History.set_blocklist(...)`.
 
-Persistence
-- This version keeps history and pins in memory only. If you want persistent history/pins, I can add optional JSON or SQLite persistence and a small migration path.
+Persistence (optional)
+
+You can enable on-disk persistence using a small SQLite database. Persistence stores clipboard items and a few settings (secret-safe toggle, blocklist) so your history survives restarts.
+
+To enable persistence, set the `CLIP_PERSISTENCE_DB` environment variable to a path where the app can write a SQLite file. Example (macOS / Linux):
+
+```bash
+# from project root, enable persistence to a local ./.local/persistence.db file
+export CLIP_PERSISTENCE_DB=./.local/persistence.db
+python clipboard_manager/main.py
+```
+
+Notes:
+- The persistence implementation is intentionally minimal and uses SQLite with WAL mode for reliability.
+- Settings saved: `secret_safe_enabled` and `blocklist_apps`.
+- Items are saved on capture and updates (pin/unpin) and temporary token items are auto-deleted after their configured lifetime.
+- To disable persistence, unset `CLIP_PERSISTENCE_DB` or run the app normally.
 
 
 Developer notes & architecture

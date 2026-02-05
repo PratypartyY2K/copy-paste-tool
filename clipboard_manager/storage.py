@@ -19,15 +19,43 @@ CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS metadata (
+    k TEXT PRIMARY KEY,
+    v TEXT
+);
 '''
 
 class Persistence:
     def __init__(self, db_path: str):
         self.db_path = os.path.abspath(db_path)
         os.makedirs(os.path.dirname(self.db_path) or '.', exist_ok=True)
+        # enable multithread access; use check_same_thread=False
         self.conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
+        self._apply_pragmas()
         self._ensure_schema()
+
+    def _apply_pragmas(self):
+        cur = self.conn.cursor()
+        # Use WAL for better concurrency and performance on CI/runners
+        try:
+            cur.execute('PRAGMA journal_mode=WAL;')
+        except Exception:
+            pass
+        try:
+            cur.execute('PRAGMA synchronous=NORMAL;')
+        except Exception:
+            pass
+        try:
+            cur.execute('PRAGMA foreign_keys=ON;')
+        except Exception:
+            pass
+        try:
+            cur.execute('PRAGMA temp_store=MEMORY;')
+        except Exception:
+            pass
+        self.conn.commit()
 
     def _ensure_schema(self):
         cur = self.conn.cursor()

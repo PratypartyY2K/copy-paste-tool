@@ -76,7 +76,7 @@ jobs:
           if [ -z "$(ls -A ./.wheelhouse)" ]; then
             echo "Building wheelhouse..."
             # Build wheels for test requirements and their dependencies into the wheelhouse
-            python -m pip wheel --wheel-dir ./.wheelhouse -r requirements-ci.txt || true
+            python -m pip wheel --wheel-dir ./.wheelhouse -r requirements-ci.txt
           else
             echo "Using cached wheelhouse"
           fi
@@ -122,6 +122,7 @@ jobs:
           files: coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+          flags: unit
 
       - name: Comment coverage on PR
         if: ${{ github.event_name == 'pull_request' && steps.covcheck.outputs.coverage_exists == 'true' }}
@@ -190,7 +191,7 @@ jobs:
           python -m pip install --upgrade pip
           if [ -z "$(ls -A ./.wheelhouse-macos)" ]; then
             echo "Building wheelhouse for macOS..."
-            python -m pip wheel --wheel-dir ./.wheelhouse-macos -r requirements-ci.txt || true
+            python -m pip wheel --wheel-dir ./.wheelhouse-macos -r requirements-ci.txt
           else
             echo "Using cached macOS wheelhouse"
           fi
@@ -217,10 +218,10 @@ jobs:
           path: coverage.xml
 
       - name: Upload GUI coverage to Codecov
-        if: always() && env.CODECOV_TOKEN
+        if: ${{ always() && secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
-
+          flags: gui

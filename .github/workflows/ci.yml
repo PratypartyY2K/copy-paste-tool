@@ -29,7 +29,7 @@ jobs:
           path: |
             ~/.cache/pip
             ./.wheelhouse
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements-ci.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
@@ -68,8 +68,8 @@ jobs:
           python -m pip install --upgrade pip
           if [ -z "$(ls -A ./.wheelhouse)" ]; then
             echo "Building wheelhouse..."
-            # Build wheels for all requirements and their dependencies into the wheelhouse
-            python -m pip wheel --wheel-dir ./.wheelhouse -r requirements.txt || true
+            # Build wheels for test requirements and their dependencies into the wheelhouse
+            python -m pip wheel --wheel-dir ./.wheelhouse -r requirements-ci.txt || true
           else
             echo "Using cached wheelhouse"
           fi
@@ -81,9 +81,9 @@ jobs:
           # Prefer wheels from the local wheelhouse when available; otherwise install from PyPI
           if [ -d ./.wheelhouse ] && [ "$(ls -A ./.wheelhouse)" ]; then
             # Install using local wheelhouse; allow dependency resolution so sub-dependencies (e.g., pluggy) are installed
-            python -m pip install --find-links ./.wheelhouse -r requirements.txt
+            python -m pip install --find-links ./.wheelhouse -r requirements-ci.txt
           else
-            python -m pip install -r requirements.txt
+            python -m pip install -r requirements-ci.txt
           fi
           # Verify critical test deps are installed; fail early with diagnostics if not
           if ! python -c "import pytest, pluggy" 2>/dev/null; then

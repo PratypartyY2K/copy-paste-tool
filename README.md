@@ -107,7 +107,7 @@ Main controls
 - Context menu (right-click on an item): copy, clip actions (trim, one-line, extract URLs, JSON-escape, camel/snake), Pin/Unpin.
 
 Hotkey
-- A global-style hotkey inside the app (Ctrl+`) shows the window and focuses the search box (changeable in code).
+- An in-app hotkey (Ctrl+`) shows the window and focuses the search box; this is NOT a system-wide/global hotkey. If you need a global hotkey, see the "Developer notes" section for implementation suggestions.
 
 
 Security & Privacy

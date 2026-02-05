@@ -127,18 +127,14 @@ jobs:
       - name: Comment coverage on PR
         if: ${{ github.event_name == 'pull_request' && steps.covcheck.outputs.coverage_exists == 'true' }}
         uses: actions/github-script@v6
+        env:
+          COVERAGE_MIN: ${{ env.COVERAGE_MIN }}
         with:
-          env: |
-            COVERAGE_MIN=${{ env.COVERAGE_MIN }}
           script: |
             const fs = require('fs');
             const path = 'coverage.xml';
             let content = '';
-            try {
-              content = fs.readFileSync(path, 'utf8');
-            } catch (e) {
-              console.log('coverage.xml not found');
-            }
+            try { content = fs.readFileSync(path, 'utf8'); } catch (e) {}
             const m = content.match(/line-rate="([0-9.]+)"/);
             const lineRate = m ? parseFloat(m[1]) : null;
             const percent = lineRate !== null ? (lineRate * 100).toFixed(1) : 'n/a';

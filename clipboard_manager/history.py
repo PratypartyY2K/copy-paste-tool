@@ -11,8 +11,8 @@ MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30
 # Default temporary storage seconds for token-like clipboard captures
 TEMPORARY_TOKEN_SECONDS = 30
-# Apps to block entirely from being stored (password managers, authenticators, keychain UIs)
-BLOCKLIST_APPS = {
+# Default apps to block entirely from being stored (password managers, authenticators, keychain UIs)
+BLOCKLIST_DEFAULTS = {
     '1password', '1password 8', 'lastpass', 'bitwarden', 'dashlane', 'keepassxc', 'keepass', 'google authenticator', 'authy', 'keychain', 'password manager'
 }
 
@@ -29,6 +29,29 @@ class HistoryStore:
         self._lock = threading.RLock()
         self._cleanup_thread = None
         self._cleanup_event = threading.Event()
+
+        # Secret-safe configuration (instance-level)
+        self.secret_safe_enabled = True
+        self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
+
+    def get_blocklist(self):
+        """Return a sorted list copy of configured blocklist substrings."""
+        with self._lock:
+            return sorted(self.blocklist_apps)
+
+    def set_blocklist(self, entries):
+        """Replace blocklist with an iterable of strings."""
+        with self._lock:
+            # normalize to lower-case substrings for matching
+            self.blocklist_apps = set(e.strip().lower() for e in entries if e and e.strip())
+
+    def set_secret_safe_enabled(self, enabled: bool):
+        with self._lock:
+            self.secret_safe_enabled = bool(enabled)
+
+    def get_secret_safe_enabled(self) -> bool:
+        with self._lock:
+            return bool(self.secret_safe_enabled)
 
     def _start_cleanup_thread(self):
         if self._cleanup_thread is not None and self._cleanup_thread.is_alive():
@@ -76,8 +99,11 @@ class HistoryStore:
     def _is_blocked_app(self, app_name: str) -> bool:
         if not app_name:
             return False
+        # If secret-safe mode is disabled, never block
+        if not self.secret_safe_enabled:
+            return False
         n = app_name.lower()
-        for bad in BLOCKLIST_APPS:
+        for bad in self.blocklist_apps:
             if bad in n:
                 return True
         return False
@@ -115,7 +141,7 @@ class HistoryStore:
             # Create item and assign board using BoardRouter
             is_temp = False
             expire_at = None
-            if self._looks_like_token(content):
+            if self.secret_safe_enabled and self._looks_like_token(content):
                 # Token-like content -> mark temporary
                 is_temp = True
                 expire_at = now + TEMPORARY_TOKEN_SECONDS

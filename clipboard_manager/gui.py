@@ -1,9 +1,31 @@
 from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout
+from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout, QCheckBox, QPushButton, QDialog, QTextEdit, QDialogButtonBox, QFormLayout
 from clipboard_manager.history import History
 from clipboard_manager.watcher import ClipboardWatcher
 from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case
+
+class BlocklistEditor(QDialog):
+    def __init__(self, parent=None, initial_blocklist=None):
+        super(BlocklistEditor, self).__init__(parent)
+        self.setWindowTitle('Edit Secret-safe Blocklist')
+        self.setModal(True)
+        layout = QVBoxLayout()
+        form = QFormLayout()
+        self.text = QTextEdit()
+        if initial_blocklist:
+            self.text.setPlainText('\n'.join(initial_blocklist))
+        form.addRow('Blocklist entries (one per line):', self.text)
+        layout.addLayout(form)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+        self.setLayout(layout)
+
+    def get_entries(self):
+        txt = self.text.toPlainText()
+        return [line.strip() for line in txt.splitlines() if line.strip()]
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -13,6 +35,16 @@ class MainWindow(QMainWindow):
 
         self.history = History()
         self._pause_ms = 500
+
+        # Secret-safe controls
+        ss_layout = QHBoxLayout()
+        self.secret_safe_checkbox = QCheckBox('Secret-safe mode')
+        self.secret_safe_checkbox.setChecked(self.history.get_secret_safe_enabled())
+        self.secret_safe_checkbox.stateChanged.connect(self._on_secret_safe_toggled)
+        ss_layout.addWidget(self.secret_safe_checkbox)
+        self.edit_blocklist_btn = QPushButton('Edit Blocklist')
+        self.edit_blocklist_btn.clicked.connect(self._on_edit_blocklist)
+        ss_layout.addWidget(self.edit_blocklist_btn)
 
         # Dropdown for recent apps
         self.app_dropdown = QComboBox()
@@ -39,6 +71,7 @@ class MainWindow(QMainWindow):
         self.pause_status_label.setVisible(False)
         pause_layout.addWidget(self.pause_status_label)
         layout.addLayout(pause_layout)
+        layout.addLayout(ss_layout)
         layout.addWidget(self.app_dropdown)
         layout.addWidget(self.list_widget)
         container = QWidget()
@@ -131,3 +164,14 @@ class MainWindow(QMainWindow):
             self.pause_status_label.setVisible(True)
             self.watcher.set_text(out, pause_ms=self._pause_ms)
             self.pause_status_label.setVisible(False)
+
+    def _on_secret_safe_toggled(self, state: int):
+        enabled = (state == Qt.CheckState.Checked)
+        self.history.set_secret_safe_enabled(enabled)
+
+    def _on_edit_blocklist(self):
+        initial_blocklist = self.history.get_blocklist()
+        editor = BlocklistEditor(self, initial_blocklist=initial_blocklist)
+        if editor.exec() == QDialog.DialogCode.Accepted:
+            entries = editor.get_entries()
+            self.history.set_blocklist(entries)

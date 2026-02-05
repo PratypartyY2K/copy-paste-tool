@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from clipboard_manager.boards import Board
+from boards import Board
 
 class ClipboardItem:
     def __init__(self, content, source_app="Unknown App", board: Board = None, is_temporary: bool = False, expire_at: float = None, pinned: bool = False):

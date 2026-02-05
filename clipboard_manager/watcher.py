@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 from PyQt6.QtWidgets import QApplication
-from clipboard_manager.utils import get_frontmost_app
+from utils import get_frontmost_app
 import time
 
 class ClipboardWatcher(QObject):

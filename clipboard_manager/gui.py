@@ -2,9 +2,9 @@ from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QCom
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout, QCheckBox, QPushButton, QDialog, QTextEdit, QDialogButtonBox, QFormLayout, QLineEdit
 from PyQt6.QtGui import QShortcut, QKeySequence
-from clipboard_manager.history import History
-from clipboard_manager.watcher import ClipboardWatcher
-from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case, fuzzy_score, highlight_match
+from history import History
+from watcher import ClipboardWatcher
+from utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case, fuzzy_score, highlight_match
 from PyQt6.QtCore import QTimer
 
 

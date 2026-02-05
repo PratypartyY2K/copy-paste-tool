@@ -1,9 +1,9 @@
-from clipboard_manager.clipboard_item import ClipboardItem
+from clipboard_item import ClipboardItem
 from collections import OrderedDict
 import hashlib
 import time
 from datetime import datetime
-from clipboard_manager.boards import BoardRouter
+from boards import BoardRouter
 import threading
 import re
 

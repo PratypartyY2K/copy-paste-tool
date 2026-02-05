@@ -54,6 +54,8 @@ class MainWindow(QMainWindow):
 
         self.app_dropdown = QComboBox()
         self.app_dropdown.currentIndexChanged.connect(self.update_list)
+        self.app_capture_checkbox = QCheckBox('Capture for this app')
+        self.app_capture_checkbox.stateChanged.connect(self._on_app_capture_toggled)
 
         self.list_widget = QListWidget()
         self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -80,6 +82,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(pause_layout)
         layout.addLayout(ss_layout)
         layout.addWidget(self.app_dropdown)
+        layout.addWidget(self.app_capture_checkbox)
         layout.addWidget(self.search_box)
         layout.addWidget(self.list_widget)
         container = QWidget()
@@ -110,6 +113,12 @@ class MainWindow(QMainWindow):
         if current_app in apps:
             self.app_dropdown.setCurrentText(current_app)
         self.app_dropdown.blockSignals(False)
+        # update per-app capture checkbox based on selected app
+        sel = self.app_dropdown.currentText()
+        enabled = self.history.is_app_capture_enabled(sel)
+        self.app_capture_checkbox.blockSignals(True)
+        self.app_capture_checkbox.setChecked(enabled)
+        self.app_capture_checkbox.blockSignals(False)
 
     def _on_history_changed(self):
         self.update_apps_dropdown()
@@ -217,3 +226,9 @@ class MainWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
         self.search_box.setFocus()
+
+    def _on_app_capture_toggled(self, state: int):
+        enabled = (state == Qt.CheckState.Checked)
+        current_app = self.app_dropdown.currentText()
+        if current_app:
+            self.history.set_app_capture_enabled(current_app, enabled)

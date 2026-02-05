@@ -13,6 +13,7 @@ Table of contents
 - Features
 - Quick start (macOS)
 - UI walkthrough
+- Security & Privacy
 - Configuration and settings
 - Developer notes
 - Tests and validation
@@ -102,10 +103,26 @@ Main controls
 - Search box: filters the visible items for the selected app/board. It searches item content and board names.
 - Secret-safe mode (checkbox): enable/disable the secret-safe heuristics.
 - Edit Blocklist: opens a small editor where you can add/remove app name substrings to block from capture.
+- Per-app capture toggle: enable or disable capture for the currently-selected app (useful to stop capturing from a specific app without blocking it globally).
 - Context menu (right-click on an item): copy, clip actions (trim, one-line, extract URLs, JSON-escape, camel/snake), Pin/Unpin.
 
 Hotkey
 - A global-style hotkey inside the app (Ctrl+`) shows the window and focuses the search box (changeable in code).
+
+
+Security & Privacy
+
+Defaults
+- Secret-safe mode is ON by default.
+- Persistence is OFF by default (history, pins, and settings are stored in memory only unless you enable persistence explicitly).
+- Common sensitive apps are pre-populated into the blocklist (password managers, authenticators, keychain-like apps).
+
+Per-app controls
+- The UI exposes a "Per-app capture" toggle which lets you enable or disable capturing for the currently-selected app without altering the global blocklist.
+
+Security notes
+- Token/JWT heuristics attempt to detect likely secrets and keep them temporary when Secret-safe mode is enabled; heuristics are conservative and may not catch all secrets. If you need stronger guarantees, avoid enabling persistence or implement secure encrypted storage.
+- If you enable persistence, consider encrypting persisted data or storing only metadata (timestamps, app names) depending on your threat model.
 
 
 Configuration and developer tuning

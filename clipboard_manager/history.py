@@ -30,6 +30,10 @@ class HistoryStore:
         self.secret_safe_enabled = True
         self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
 
+        # per-app capture toggles; True means capture enabled (default True)
+        self._app_capture_enabled = {}
+
+        # lightweight observer callbacks (callable[[], None])
         self._change_listeners = []
 
     def add_change_listener(self, cb):
@@ -66,6 +70,18 @@ class HistoryStore:
         with self._lock:
             self.blocklist_apps = set(e.strip().lower() for e in entries if e and e.strip())
         self._notify_change()
+
+    def set_app_capture_enabled(self, app_name: str, enabled: bool):
+        with self._lock:
+            if app_name:
+                self._app_capture_enabled[app_name] = bool(enabled)
+        self._notify_change()
+
+    def is_app_capture_enabled(self, app_name: str) -> bool:
+        with self._lock:
+            if not app_name:
+                return True
+            return self._app_capture_enabled.get(app_name, True)
 
     def set_secret_safe_enabled(self, enabled: bool):
         with self._lock:
@@ -138,6 +154,9 @@ class HistoryStore:
 
     def add_item(self, content, source_app="Unknown App", timestamp=None):
         if not content:
+            return None
+
+        if not self.is_app_capture_enabled(source_app):
             return None
 
         if self._is_blocked_app(source_app):

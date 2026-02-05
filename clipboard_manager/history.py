@@ -100,7 +100,7 @@ class HistoryStore:
         self._cleanup_thread.start()
 
     def _cleanup_loop(self):
-        while not self._cleanup_event.wait(timeout=2.0):
+        while not self._cleanup_event.wait(timeout=0.5):
             now = time.time()
             removed = False
             with self._lock:

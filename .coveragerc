@@ -1,0 +1,11 @@
+[run]
+omit =
+    clipboard_manager/gui.py
+    clipboard_manager/main.py
+    clipboard_manager/watcher.py
+
+[report]
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    if __name__ == .__main__.:

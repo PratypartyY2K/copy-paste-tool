@@ -1,6 +1,9 @@
+import pytest
 from PyQt6.QtWidgets import QApplication, QMenu
 from PyQt6.QtCore import QPoint
 from clipboard_manager.gui import MainWindow
+
+pytestmark = pytest.mark.gui
 
 
 def test_update_list_and_actions(monkeypatch, qtbot):

@@ -5,6 +5,7 @@ from PyQt6.QtGui import QShortcut, QKeySequence
 from clipboard_manager.history import History
 from clipboard_manager.watcher import ClipboardWatcher
 from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case
+from PyQt6.QtCore import QTimer
 
 
 class BlocklistEditor(QDialog):
@@ -38,6 +39,9 @@ class MainWindow(QMainWindow):
 
         self.history = History()
         self._pause_ms = 500
+
+        self._history_listener = lambda: QTimer.singleShot(0, self._on_history_changed)
+        self.history.add_change_listener(self._history_listener)
 
         ss_layout = QHBoxLayout()
         self.secret_safe_checkbox = QCheckBox('Secret-safe mode')
@@ -106,6 +110,17 @@ class MainWindow(QMainWindow):
         if current_app in apps:
             self.app_dropdown.setCurrentText(current_app)
         self.app_dropdown.blockSignals(False)
+
+    def _on_history_changed(self):
+        self.update_apps_dropdown()
+        self.update_list()
+
+    def closeEvent(self, event):
+        try:
+            self.history.remove_change_listener(self._history_listener)
+        except Exception:
+            pass
+        return super(MainWindow, self).closeEvent(event)
 
     def update_list(self):
         self.list_widget.clear()

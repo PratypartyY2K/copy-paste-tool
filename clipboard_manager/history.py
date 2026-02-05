@@ -30,6 +30,32 @@ class HistoryStore:
         self.secret_safe_enabled = True
         self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
 
+        self._change_listeners = []
+
+    def add_change_listener(self, cb):
+        if not callable(cb):
+            return
+        with self._lock:
+            if cb not in self._change_listeners:
+                self._change_listeners.append(cb)
+
+    def remove_change_listener(self, cb):
+        with self._lock:
+            try:
+                self._change_listeners.remove(cb)
+            except ValueError:
+                pass
+
+    def _notify_change(self):
+        listeners = []
+        with self._lock:
+            listeners = list(self._change_listeners)
+        for cb in listeners:
+            try:
+                cb()
+            except Exception:
+                pass
+
     def get_blocklist(self):
         """Return a sorted list copy of configured blocklist substrings."""
         with self._lock:
@@ -39,10 +65,12 @@ class HistoryStore:
         """Replace blocklist with an iterable of strings."""
         with self._lock:
             self.blocklist_apps = set(e.strip().lower() for e in entries if e and e.strip())
+        self._notify_change()
 
     def set_secret_safe_enabled(self, enabled: bool):
         with self._lock:
             self.secret_safe_enabled = bool(enabled)
+        self._notify_change()
 
     def get_secret_safe_enabled(self) -> bool:
         with self._lock:
@@ -73,6 +101,8 @@ class HistoryStore:
                     new_items.append(it)
                 if removed:
                     self.items = new_items
+            if removed:
+                self._notify_change()
 
     def stop_cleanup(self):
         self._cleanup_event.set()
@@ -99,6 +129,12 @@ class HistoryStore:
             if bad in n:
                 return True
         return False
+
+    def _first_non_pinned_index(self):
+        idx = 0
+        while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
+            idx += 1
+        return idx
 
     def add_item(self, content, source_app="Unknown App", timestamp=None):
         if not content:
@@ -147,16 +183,8 @@ class HistoryStore:
                 except Exception:
                     pass
 
-            if getattr(item, 'pinned', False):
-                idx = 0
-                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
-                    idx += 1
-                self.items.insert(idx, item)
-            else:
-                idx = 0
-                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
-                    idx += 1
-                self.items.insert(idx, item)
+            idx = self._first_non_pinned_index()
+            self.items.insert(idx, item)
             try:
                 self._items_by_id[item.id] = item
             except Exception:
@@ -176,7 +204,8 @@ class HistoryStore:
             if is_temp:
                 self._start_cleanup_thread()
 
-            return item
+        self._notify_change()
+        return item
 
     def get_item_by_id(self, item_id):
         with self._lock:
@@ -198,10 +227,9 @@ class HistoryStore:
             item.pinned = True
             try:
                 self.items = [i for i in self.items if i.id != item_id]
-                idx = 0
-                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
-                    idx += 1
+                idx = self._first_non_pinned_index()
                 self.items.insert(idx, item)
+                self._notify_change()
                 return True
             except Exception:
                 return False
@@ -214,12 +242,11 @@ class HistoryStore:
             item.pinned = False
             try:
                 self.items = [i for i in self.items if i.id != item_id]
-                idx = 0
-                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
-                    idx += 1
+                idx = self._first_non_pinned_index()
                 while idx < len(self.items) and self.items[idx].timestamp > item.timestamp:
                     idx += 1
                 self.items.insert(idx, item)
+                self._notify_change()
                 return True
             except Exception:
                 return False

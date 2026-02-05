@@ -32,12 +32,13 @@ class BlocklistEditor(QDialog):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, history=None):
         super(MainWindow, self).__init__()
         self.setWindowTitle("App-Aware Clipboard Manager")
         self.setGeometry(100, 100, 600, 400)
 
-        self.history = History()
+        # allow injecting a persisted History for the app entrypoint
+        self.history = history or History()
         self._pause_ms = 500
 
         self._history_listener = lambda: QTimer.singleShot(0, self._on_history_changed)

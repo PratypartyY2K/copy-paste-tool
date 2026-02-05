@@ -19,16 +19,37 @@ source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 ```
 
-2. Install runtime/test dependencies (PyQt6 is required for the GUI):
+2. Install runtime/test dependencies (PyQt6 and pytest are required for the GUI tests):
 
 ```bash
-python -m pip install PyQt6
+python -m pip install -r requirements.txt
 ```
 
 3. Run the app locally (with venv active):
 
 ```bash
 python clipboard_manager/main.py
+```
+
+CI and coverage
+----------------
+This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
+- CI runs `pytest` in a headless environment using `xvfb` so GUI tests (pytest-qt) run reliably.
+- The workflow enforces a minimum coverage threshold (set to 70% by default). If coverage falls below this value the CI will fail.
+
+Running tests locally
+---------------------
+Run unit and GUI tests with pytest:
+
+```bash
+pytest -q --cov=clipboard_manager --cov-report=term-missing
+```
+
+If your platform does not have a display (Linux CI or headless dev machine), run GUI tests under Xvfb:
+
+```bash
+sudo apt-get install xvfb
+xvfb-run -s "-screen 0 1920x1080x24" pytest -q
 ```
 
 Project layout (high level)
@@ -39,31 +60,21 @@ Project layout (high level)
   - `watcher.py` - clipboard watcher and pause behavior
   - `history.py` - history store, dedupe, secret-safe, pins
   - `clipboard_item.py` - data model for items
-  - `boards.py` - board enum & routing heuristics
+  - `boards.py` - board enum & routing heuristics (rules engine)
   - `utils.py` - small helpers (token detection, transforms, apple script)
-- `tests/` - small test scripts that run without pytest
+- `tests/` - pytest-based unit and GUI tests
 - `README.md` - user-facing documentation
 - `DEVELOPMENT.md`, `CONTRIBUTING.md` - developer docs
 
-Running tests
--------------
-Several small test scripts exist to validate core behavior. They are intentionally simple so they do not require pytest.
-
-Run them from the project root (with venv active):
+Running tests in CI locally (debugging)
+---------------------------------------
+You can emulate CI locally by running tests under Xvfb and ensuring the same dependencies are installed:
 
 ```bash
-python tests/test_utils.py
-python tests/test_secret_safe.py
-python tests/test_pins.py
-python tests/smoke_pause_test.py
-python tests/gui_startup.py  # non-blocking GUI startup check
+xvfb-run -s "-screen 0 1920x1080x24" pytest -q --cov=clipboard_manager --cov-report=xml
 ```
 
-Testing notes
--------------
-- `tests/smoke_pause_test.py` validates pause behavior and watcher/history integration.
-- `tests/gui_startup.py` creates `QApplication` and instantiates the main window; it runs briefly and exits.
-- If tests fail with `ModuleNotFoundError: No module named 'PyQt6'`, make sure you installed PyQt6 into the same Python you're running.
+If tests behave differently in CI, check `requirements.txt` and system packages (Xvfb) in the runner.
 
 Coding style & conventions
 -------------------------
@@ -74,22 +85,7 @@ Coding style & conventions
 
 Adding tests
 ------------
-- Add small unit-style scripts under `tests/` following the existing pattern (they use asserts and print a success string).
-- Where possible, keep tests fast and deterministic (avoid depending on a running GUI unless explicitly testing GUI startup).
-
-Working with the codebase
--------------------------
-- Use `History.add_change_listener(cb)` to react to background updates rather than polling.
-- Use `BoardRouter.assign_board_to_item(item)` to assign boards when creating items.
-
-Debugging tips
---------------
-- If the app reports `Unknown App`, the AppleScript call to `osascript` may be blocked — check system permissions and Automation settings.
-- For GUI inspection, use Qt designer or print debug statements; remember to avoid printing in tight loops in the main thread.
-
-Next tasks / TODOs (suggested)
------------------------------
-- Add persisted storage (JSON or SQLite) for history, pins and settings (I can implement this next if you confirm a storage format).
-- Add more unit tests for board routing heuristics and search logic.
+- Add pytest test files under `tests/` using `test_*.py` naming.
+- GUI tests may use `pytest-qt` fixtures (e.g., `qtbot`) to manage widgets and event loops.
 
 Last updated: 2026-02-04

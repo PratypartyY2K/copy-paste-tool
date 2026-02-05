@@ -1,6 +1,6 @@
 # App-Aware Clipboard Manager
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![CI](https://github.com/your-org/your-repo/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/your-repo/actions)
 
 A lightweight, macOS-focused clipboard manager built with PyQt6. It captures text copies, attributes them to the source application, and presents an app-aware UI with advanced developer-friendly utilities.
 
@@ -14,6 +14,7 @@ Table of contents
 - Quick start (macOS)
 - UI walkthrough
 - Security & Privacy
+- CI and testing
 - Configuration and settings
 - Developer notes
 - Tests and validation
@@ -162,6 +163,33 @@ python tests/test_pins.py
 python tests/smoke_pause_test.py
 python tests/gui_startup.py  # non-blocking GUI startup check
 ```
+
+
+CI and testing
+
+This repository includes a GitHub Actions workflow that runs the test suite and enforces a minimum coverage threshold.
+
+- Workflow file: `.github/workflows/ci.yml`
+- Coverage requirement: the CI enforces a minimum coverage (default set to 70%). The workflow runs tests in a headless environment using `xvfb` so GUI tests (pytest-qt) run reliably.
+
+Run tests locally with coverage (recommended):
+
+```bash
+# install test deps from repo
+python3 -m pip install -r requirements.txt
+# run pytest with coverage
+pytest --cov=clipboard_manager --cov-report=term-missing
+```
+
+If you want to run GUI tests locally in an environment without a display, use Xvfb (Linux) or run on macOS directly:
+
+```bash
+# on Linux with Xvfb
+sudo apt-get install xvfb
+xvfb-run -s "-screen 0 1920x1080x24" pytest -q
+```
+
+If the CI badge link in the README is incorrect, replace the `your-org/your-repo` path with the actual GitHub owner and repository name to enable the badge.
 
 
 Troubleshooting

@@ -20,11 +20,26 @@ python tests/smoke_pause_test.py
 python tests/gui_startup.py
 ```
 
-Coding guidelines
------------------
-- Keep public APIs of modules stable where possible. Backwards-compatible changes are preferred.
-- Add tests for bug fixes and new features. Keep tests fast and deterministic.
-- Use small, focused commits with clear messages.
+CI and test expectations
+------------------------
+- This repository runs tests in GitHub Actions (`.github/workflows/ci.yml`). The CI runs GUI tests under Xvfb so pytest-qt tests run in headless CI environments.
+- The CI enforces a minimum coverage threshold (default 70%). Make sure your changes are covered by unit tests or GUI tests to avoid CI failures.
+
+Run pytest locally (recommended)
+-------------------------------
+Install pytest and GUI test deps and run tests with coverage:
+
+```bash
+python -m pip install -r requirements.txt
+pytest --cov=clipboard_manager --cov-report=term-missing
+```
+
+If you want to emulate CI locally (headless), run with Xvfb:
+
+```bash
+sudo apt-get install xvfb
+xvfb-run -s "-screen 0 1920x1080x24" pytest -q --cov=clipboard_manager --cov-report=xml
+```
 
 Pull request checklist
 ----------------------

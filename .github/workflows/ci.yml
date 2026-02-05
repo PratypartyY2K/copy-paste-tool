@@ -29,24 +29,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install system dependencies (Xvfb for GUI tests)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Install python dependencies
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
 
-      - name: Run tests with pytest
+      - name: Run tests with pytest under Xvfb and enforce coverage minimum
         run: |
-          python -m pytest -q
+          # Run tests inside X virtual framebuffer so GUI tests can run in headless CI
+          # Enforce coverage minimum (fail-under). Adjust COVERAGE_MIN as needed.
+          COVERAGE_MIN=70
+          xvfb-run -s "-screen 0 1920x1080x24" python -m pytest -q --cov=clipboard_manager --cov-report=xml --cov-fail-under=${COVERAGE_MIN}
 
       - name: Upload coverage report
         if: always()
-        run: |
-          python -m pip install pytest-cov coverage || true
-          python -m pytest --maxfail=1 --disable-warnings -q --cov=clipboard_manager --cov-report=xml || true
-
-      - name: Archive test reports
-        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-cov-xml
+          name: coverage-xml
           path: coverage.xml

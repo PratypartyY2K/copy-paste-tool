@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      COVERAGE_MIN: 70
     strategy:
       matrix:
         python-version: [3.11]
@@ -41,10 +43,7 @@ jobs:
 
       - name: Run tests with pytest under Xvfb and enforce coverage minimum
         run: |
-          # Run tests inside X virtual framebuffer so GUI tests can run in headless CI
-          # Enforce coverage minimum (fail-under). Adjust COVERAGE_MIN as needed.
-          COVERAGE_MIN=70
-          xvfb-run -s "-screen 0 1920x1080x24" python -m pytest -q --cov=clipboard_manager --cov-report=xml --cov-fail-under=${COVERAGE_MIN}
+          xvfb-run -s "-screen 0 1920x1080x24" python -m pytest -q --cov=clipboard_manager --cov-report=xml --cov-fail-under=${{ env.COVERAGE_MIN }}
 
       - name: Upload coverage report
         if: always()
@@ -59,3 +58,34 @@ jobs:
         with:
           files: coverage.xml
           fail_ci_if_error: true
+
+      - name: Comment coverage on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          env: |
+            COVERAGE_MIN=${{ env.COVERAGE_MIN }}
+          script: |
+            const fs = require('fs');
+            const path = 'coverage.xml';
+            let content = '';
+            try { content = fs.readFileSync(path,'utf8'); } catch(e) {
+              core.info('coverage.xml not found');
+            }
+            const m = content.match(/line-rate=\"([0-9.]+)\"/);
+            const lineRate = m ? parseFloat(m[1]) : null;
+            const percent = lineRate !== null ? (lineRate*100).toFixed(1) : 'n/a';
+            const min = parseFloat(process.env.COVERAGE_MIN || '0');
+            const status = (lineRate !== null && lineRate*100 >= min) ? 'PASSED' : 'FAILED';
+            const body = `Codecov: ${percent}% line coverage (required: ${min}%) - **${status}**\n\n<details><summary>coverage.xml excerpt</summary>\n\n\
+`+ (content ? content.substring(0,1000) : 'coverage.xml not available') + `\n\n\
+` + `</details>`;
+            const pr = context.payload.pull_request;
+            if (pr) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body
+              });
+            }

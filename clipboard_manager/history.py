@@ -18,7 +18,7 @@ _JWT_RE = re.compile(r"^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$")
 _LONG_BASE64_RE = re.compile(r"^[A-Za-z0-9-_]{40,}$")
 
 class HistoryStore:
-    def __init__(self):
+    def __init__(self, persistence=None):
         self.items = []
         self._recent_hashes = OrderedDict()
         self._last_seen_by_app = {}
@@ -35,6 +35,49 @@ class HistoryStore:
 
         # lightweight observer callbacks (callable[[], None])
         self._change_listeners = []
+
+        # persistence (optional) - object with load_items/save_item/delete_item/load_settings/save_setting
+        self._persistence = persistence
+        if self._persistence:
+            try:
+                self._load_from_persistence()
+            except Exception:
+                pass
+
+    def _load_from_persistence(self):
+        data = self._persistence.load_settings()
+        if data.get('secret_safe_enabled') in ('0', 'False', 'false', None):
+            self.secret_safe_enabled = False
+        elif data.get('secret_safe_enabled') in ('1', 'True', 'true'):
+            self.secret_safe_enabled = True
+        bl = data.get('blocklist_apps')
+        if bl:
+            try:
+                self.blocklist_apps = set(x.strip().lower() for x in bl.split('\n') if x.strip())
+            except Exception:
+                pass
+
+        items = self._persistence.load_items()
+        for r in items:
+            try:
+                item = ClipboardItem(r['content'], source_app=r.get('source_app') or 'Unknown App')
+                item.id = r.get('id') or item.id
+                try:
+                    item.timestamp = datetime.fromisoformat(r.get('timestamp'))
+                except Exception:
+                    pass
+                # board stored as name
+                try:
+                    item.board = getattr(item.board, 'name', r.get('board'))
+                except Exception:
+                    pass
+                item.is_temporary = bool(r.get('is_temporary'))
+                item.expire_at = r.get('expire_at')
+                item.pinned = bool(r.get('pinned'))
+                self.items.append(item)
+                self._items_by_id[item.id] = item
+            except Exception:
+                pass
 
     def add_change_listener(self, cb):
         if not callable(cb):
@@ -69,6 +112,11 @@ class HistoryStore:
         """Replace blocklist with an iterable of strings."""
         with self._lock:
             self.blocklist_apps = set(e.strip().lower() for e in entries if e and e.strip())
+        if self._persistence:
+            try:
+                self._persistence.save_setting('blocklist_apps', '\n'.join(sorted(self.blocklist_apps)))
+            except Exception:
+                pass
         self._notify_change()
 
     def set_app_capture_enabled(self, app_name: str, enabled: bool):
@@ -86,6 +134,11 @@ class HistoryStore:
     def set_secret_safe_enabled(self, enabled: bool):
         with self._lock:
             self.secret_safe_enabled = bool(enabled)
+        if self._persistence:
+            try:
+                self._persistence.save_setting('secret_safe_enabled', '1' if self.secret_safe_enabled else '0')
+            except Exception:
+                pass
         self._notify_change()
 
     def get_secret_safe_enabled(self) -> bool:
@@ -112,6 +165,11 @@ class HistoryStore:
                                 del self._items_by_id[it.id]
                             except Exception:
                                 pass
+                            if self._persistence:
+                                try:
+                                    self._persistence.delete_item(it.id)
+                                except Exception:
+                                    pass
                             removed = True
                             continue
                     new_items.append(it)
@@ -223,6 +281,13 @@ class HistoryStore:
             if is_temp:
                 self._start_cleanup_thread()
 
+            # persist
+            if self._persistence:
+                try:
+                    self._persistence.save_item(item)
+                except Exception:
+                    pass
+
         self._notify_change()
         return item
 
@@ -248,6 +313,11 @@ class HistoryStore:
                 self.items = [i for i in self.items if i.id != item_id]
                 idx = self._first_non_pinned_index()
                 self.items.insert(idx, item)
+                if self._persistence:
+                    try:
+                        self._persistence.update_item(item)
+                    except Exception:
+                        pass
                 self._notify_change()
                 return True
             except Exception:
@@ -265,9 +335,15 @@ class HistoryStore:
                 while idx < len(self.items) and self.items[idx].timestamp > item.timestamp:
                     idx += 1
                 self.items.insert(idx, item)
+                if self._persistence:
+                    try:
+                        self._persistence.update_item(item)
+                    except Exception:
+                        pass
                 self._notify_change()
                 return True
             except Exception:
                 return False
+
 
 History = HistoryStore

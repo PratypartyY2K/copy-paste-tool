@@ -1,0 +1,95 @@
+import sqlite3
+import os
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+
+SCHEMA = '''
+CREATE TABLE IF NOT EXISTS items (
+    id TEXT PRIMARY KEY,
+    content TEXT NOT NULL,
+    source_app TEXT,
+    timestamp TEXT,
+    board TEXT,
+    is_temporary INTEGER DEFAULT 0,
+    expire_at REAL NULL,
+    pinned INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
+'''
+
+class Persistence:
+    def __init__(self, db_path: str):
+        self.db_path = os.path.abspath(db_path)
+        os.makedirs(os.path.dirname(self.db_path) or '.', exist_ok=True)
+        self.conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
+        self.conn.row_factory = sqlite3.Row
+        self._ensure_schema()
+
+    def _ensure_schema(self):
+        cur = self.conn.cursor()
+        cur.executescript(SCHEMA)
+        self.conn.commit()
+
+    def load_items(self) -> List[Dict[str, Any]]:
+        cur = self.conn.cursor()
+        cur.execute('SELECT * FROM items ORDER BY pinned DESC, timestamp DESC')
+        rows = cur.fetchall()
+        items = []
+        for r in rows:
+            items.append({
+                'id': r['id'],
+                'content': r['content'],
+                'source_app': r['source_app'],
+                'timestamp': r['timestamp'],
+                'board': r['board'],
+                'is_temporary': bool(r['is_temporary']),
+                'expire_at': r['expire_at'],
+                'pinned': bool(r['pinned']),
+            })
+        return items
+
+    def save_item(self, item) -> None:
+        cur = self.conn.cursor()
+        cur.execute('''
+            INSERT OR REPLACE INTO items (id, content, source_app, timestamp, board, is_temporary, expire_at, pinned)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            item.id,
+            item.content,
+            item.source_app,
+            item.timestamp.isoformat() if hasattr(item.timestamp, 'isoformat') else str(item.timestamp),
+            getattr(item.board, 'name', str(item.board)),
+            1 if item.is_temporary else 0,
+            item.expire_at,
+            1 if item.pinned else 0,
+        ))
+        self.conn.commit()
+
+    def delete_item(self, item_id: str) -> None:
+        cur = self.conn.cursor()
+        cur.execute('DELETE FROM items WHERE id=?', (item_id,))
+        self.conn.commit()
+
+    def update_item(self, item) -> None:
+        # same as save_item (INSERT OR REPLACE covers it)
+        self.save_item(item)
+
+    def load_settings(self) -> Dict[str, str]:
+        cur = self.conn.cursor()
+        cur.execute('SELECT key, value FROM settings')
+        return {r['key']: r['value'] for r in cur.fetchall()}
+
+    def save_setting(self, key: str, value: str) -> None:
+        cur = self.conn.cursor()
+        cur.execute('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', (key, value))
+        self.conn.commit()
+
+    def close(self):
+        try:
+            self.conn.close()
+        except Exception:
+            pass

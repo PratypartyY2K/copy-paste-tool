@@ -36,9 +36,31 @@ jobs:
 
       - name: Install system dependencies (Xvfb for GUI tests)
         run: |
+          set -eux
           sudo apt-get update
-          # Install X virtual framebuffer and GL/EGL libs required by Qt/PyQt
-          sudo apt-get install -y xvfb libegl1-mesa libgl1-mesa-glx libx11-xcb1 libxcb-xinerama0 libxcb-xfixes0 libxkbcommon-x11-0 libglu1-mesa
+          # Always install Xvfb and common X11/XCB runtime libs
+          sudo apt-get install -y --no-install-recommends xvfb libx11-xcb1 libxcb-xinerama0 libxcb-xfixes0 libxkbcommon-x11-0 libglu1-mesa || true
+
+          # Try several plausible EGL/GL package names across Ubuntu releases.
+          # Some runners provide libegl1-mesa, others provide libegl1; some provide libgl1-mesa-glx, others libgl1-mesa-dri or libgl1.
+          sudo apt-get install -y --no-install-recommends libegl1-mesa || true
+          if ! dpkg -s libegl1-mesa >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libegl1 || true
+          fi
+
+          sudo apt-get install -y --no-install-recommends libgl1-mesa-glx || true
+          if ! dpkg -s libgl1-mesa-glx >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libgl1-mesa-dri || true
+          fi
+          if ! dpkg -s libgl1-mesa-glx >/dev/null 2>&1 && ! dpkg -s libgl1-mesa-dri >/dev/null 2>&1; then
+            sudo apt-get install -y --no-install-recommends libgl1 || true
+          fi
+
+          # Verify at least one of the required libs exists; print diagnostics if missing.
+          if ! ldconfig -p | grep -q libEGL; then
+            echo 'Warning: libEGL not found on runner (attempted multiple package names).' >&2
+            ldconfig -p || true
+          fi
 
       - name: Build wheelhouse (only on cache miss or empty wheelhouse)
         run: |

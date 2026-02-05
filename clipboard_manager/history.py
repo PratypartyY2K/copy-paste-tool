@@ -159,7 +159,19 @@ class HistoryStore:
                     pass
 
             # Insert at front
-            self.items.insert(0, item)
+            # Maintain pinned items at the top. Insert new item at top of its group.
+            if getattr(item, 'pinned', False):
+                # find first non-pinned index
+                idx = 0
+                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
+                    idx += 1
+                self.items.insert(idx, item)
+            else:
+                # insert after pinned items
+                idx = 0
+                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
+                    idx += 1
+                self.items.insert(idx, item)
             try:
                 self._items_by_id[item.id] = item
             except Exception:
@@ -193,5 +205,44 @@ class HistoryStore:
     def get_items_by_app(self, app_name):
         with self._lock:
             return [item for item in self.items if item.source_app == app_name]
+
+    def pin_item(self, item_id):
+        with self._lock:
+            item = self._items_by_id.get(item_id)
+            if not item:
+                return False
+            item.pinned = True
+            # move item to the pinned area top
+            try:
+                self.items = [i for i in self.items if i.id != item_id]
+                # insert at end of pinned area
+                idx = 0
+                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
+                    idx += 1
+                self.items.insert(idx, item)
+                return True
+            except Exception:
+                return False
+
+    def unpin_item(self, item_id):
+        with self._lock:
+            item = self._items_by_id.get(item_id)
+            if not item:
+                return False
+            item.pinned = False
+            # move item after pinned area (to the top of non-pinned group)
+            try:
+                self.items = [i for i in self.items if i.id != item_id]
+                # compute insertion index: after pinned items, but keep newer non-pinned items before it
+                idx = 0
+                while idx < len(self.items) and getattr(self.items[idx], 'pinned', False):
+                    idx += 1
+                # advance past items that are newer than the item (so most recent items stay first)
+                while idx < len(self.items) and self.items[idx].timestamp > item.timestamp:
+                    idx += 1
+                self.items.insert(idx, item)
+                return True
+            except Exception:
+                return False
 
 History = HistoryStore

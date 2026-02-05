@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout, QCheckBox, QPushButton, QDialog, QTextEdit, QDialogButtonBox, QFormLayout
+from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout, QCheckBox, QPushButton, QDialog, QTextEdit, QDialogButtonBox, QFormLayout, QLineEdit
+from PyQt6.QtGui import QShortcut, QKeySequence
 from clipboard_manager.history import History
 from clipboard_manager.watcher import ClipboardWatcher
 from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case
@@ -55,6 +56,11 @@ class MainWindow(QMainWindow):
         self.list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list_widget.customContextMenuRequested.connect(self.show_context_menu)
 
+        # Search box
+        self.search_box = QLineEdit()
+        self.search_box.setPlaceholderText('Search current app/board...')
+        self.search_box.textChanged.connect(self.update_list)
+
         # Layout
         layout = QVBoxLayout()
         pause_layout = QHBoxLayout()
@@ -73,10 +79,15 @@ class MainWindow(QMainWindow):
         layout.addLayout(pause_layout)
         layout.addLayout(ss_layout)
         layout.addWidget(self.app_dropdown)
+        layout.addWidget(self.search_box)
         layout.addWidget(self.list_widget)
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
+
+        # Hotkey: Ctrl+` to show window and focus search
+        shortcut = QShortcut(QKeySequence('Ctrl+`'), self)
+        shortcut.activated.connect(self._on_hotkey_open)
 
         # Watcher: signal-based clipboard event emitter
         self.watcher = ClipboardWatcher()
@@ -107,12 +118,20 @@ class MainWindow(QMainWindow):
         selected_app = self.app_dropdown.currentText()
         if not selected_app:
             return
+        filter_text = self.search_box.text().lower().strip()
         from PyQt6.QtWidgets import QListWidgetItem
         items = self.history.get_items_by_app(selected_app)
         for item in items:
+            # filter by search
+            if filter_text:
+                if filter_text not in item.content.lower() and filter_text not in getattr(item.board, 'value', '').lower():
+                    continue
             label = "%s - [%s] %s" % (item.timestamp.strftime('%H:%M:%S'), getattr(item.board, 'value', 'other'), item.content)
             list_item = QListWidgetItem(label)
             list_item.setData(Qt.ItemDataRole.UserRole, item.id)
+            # style pinned items differently (prefix)
+            if getattr(item, 'pinned', False):
+                list_item.setText('[PIN] ' + list_item.text())
             self.list_widget.addItem(list_item)
 
     def show_context_menu(self, position):
@@ -130,9 +149,11 @@ class MainWindow(QMainWindow):
         json_action = menu.addAction("JSON-escape")
         camel_action = menu.addAction("Convert to camelCase")
         snake_action = menu.addAction("Convert to snake_case")
+        pin_action = menu.addAction("Pin item")
+        unpin_action = menu.addAction("Unpin item")
 
         action = menu.exec(self.list_widget.viewport().mapToGlobal(position))
-        if action in (copy_action, trim_action, oneline_action, extract_urls_action, json_action, camel_action, snake_action):
+        if action in (copy_action, trim_action, oneline_action, extract_urls_action, json_action, camel_action, snake_action, pin_action, unpin_action):
             lw_item = self.list_widget.currentItem()
             if lw_item is None:
                 return
@@ -159,6 +180,15 @@ class MainWindow(QMainWindow):
             else:
                 out = original
 
+            if action == pin_action:
+                self.history.pin_item(item_id)
+                self.update_list()
+                return
+            if action == unpin_action:
+                self.history.unpin_item(item_id)
+                self.update_list()
+                return
+
             # set clipboard text while pausing capture briefly
             self.pause_status_label.setText('Paused (%d ms)' % (self._pause_ms,))
             self.pause_status_label.setVisible(True)
@@ -175,3 +205,9 @@ class MainWindow(QMainWindow):
         if editor.exec() == QDialog.DialogCode.Accepted:
             entries = editor.get_entries()
             self.history.set_blocklist(entries)
+
+    def _on_hotkey_open(self):
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        self.search_box.setFocus()

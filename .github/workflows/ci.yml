@@ -218,7 +218,6 @@ jobs:
           path: coverage.xml
 
       - name: Upload GUI coverage to Codecov
-        if: ${{ always() && secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v4
         with:
           files: coverage.xml

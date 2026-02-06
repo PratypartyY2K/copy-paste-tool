@@ -1,11 +1,12 @@
-from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu
+from PyQt6.QtWidgets import QMainWindow, QListWidget, QVBoxLayout, QWidget, QComboBox, QMenu, QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QLabel, QSpinBox, QHBoxLayout, QCheckBox, QPushButton, QDialog, QTextEdit, QDialogButtonBox, QFormLayout, QLineEdit
 from PyQt6.QtGui import QShortcut, QKeySequence
-from history import History
-from watcher import ClipboardWatcher
-from utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case, fuzzy_score, highlight_match
+from clipboard_manager.history import History
+from clipboard_manager.watcher import ClipboardWatcher
+from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case, fuzzy_score, highlight_match
 from PyQt6.QtCore import QTimer
+import os
 
 
 class BlocklistEditor(QDialog):
@@ -34,12 +35,11 @@ class BlocklistEditor(QDialog):
 class MainWindow(QMainWindow):
     def __init__(self, history=None):
         super(MainWindow, self).__init__()
-        self.setWindowTitle("App-Aware Clipboard Manager")
-        self.setGeometry(100, 100, 600, 400)
+        self.setWindowTitle('App-Aware Clipboard Manager')
+        self.setGeometry(100, 100, 700, 480)
 
-        # allow injecting a persisted History for the app entrypoint
         self.history = history or History()
-        self._pause_ms = 500
+        self._pause_ms = 300
 
         self._history_listener = lambda: QTimer.singleShot(0, self._on_history_changed)
         self.history.add_change_listener(self._history_listener)
@@ -97,10 +97,37 @@ class MainWindow(QMainWindow):
         self.watcher.clipboard_changed.connect(self._on_clipboard_event)
 
     def _on_clipboard_event(self, content: str, source_app: str, timestamp: float):
+        if os.environ.get('CLIP_DEBUG') == '2':
+            try:
+                preview = (content or '')[:200].replace('\n','\\n')
+            except Exception:
+                preview = ''
+            print('[clip-debug] gui._on_clipboard_event received preview="%s" source_app=%s ts=%s' % (preview, source_app, timestamp))
         item = self.history.add_item(content, source_app=source_app, timestamp=timestamp)
         if item is not None:
+            if os.environ.get('CLIP_DEBUG') == '2':
+                print('[clip-debug] gui: history.add_item returned id=%s' % (item.id,))
             self.update_apps_dropdown()
+            try:
+                # auto-select the app that produced the new item so users see it immediately
+                self.app_dropdown.setCurrentText(item.source_app)
+            except Exception:
+                pass
             self.update_list()
+            try:
+                # scroll to newly added item if present
+                from PyQt6.QtWidgets import QListWidgetItem
+                # find the list item with this id
+                for i in range(self.list_widget.count()):
+                    lw = self.list_widget.item(i)
+                    try:
+                        if lw and lw.data(int(Qt.ItemDataRole.UserRole)) == item.id:
+                            self.list_widget.scrollToItem(lw)
+                            break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
 
     def _on_pause_spin_changed(self, value: int):
         self._pause_ms = int(value)
@@ -114,7 +141,6 @@ class MainWindow(QMainWindow):
         if current_app in apps:
             self.app_dropdown.setCurrentText(current_app)
         self.app_dropdown.blockSignals(False)
-        # update per-app capture checkbox based on selected app
         sel = self.app_dropdown.currentText()
         enabled = self.history.is_app_capture_enabled(sel)
         self.app_capture_checkbox.blockSignals(True)
@@ -156,7 +182,7 @@ class MainWindow(QMainWindow):
             board = getattr(item.board, 'value', 'other')
             html = '<span style="color: gray; font-size: 10px">%s</span> - <span style="font-weight: bold;">[%s]</span> %s' % (timestamp, board, label_html)
             list_item = QListWidgetItem()
-            list_item.setData(Qt.ItemDataRole.UserRole, item.id)
+            list_item.setData(int(Qt.ItemDataRole.UserRole), item.id)
             if getattr(item, 'pinned', False):
                 html = '<span style="color: green; font-weight: bold;">[PIN]</span> ' + html
             self.list_widget.addItem(list_item)
@@ -189,7 +215,14 @@ class MainWindow(QMainWindow):
             lw_item = self.list_widget.currentItem()
             if lw_item is None:
                 return
-            item_id = lw_item.data(Qt.ItemDataRole.UserRole)
+            try:
+                item_id = lw_item.data(int(Qt.ItemDataRole.UserRole))
+            except Exception:
+                try:
+                    # fallback: older PyQt versions may accept the enum directly
+                    item_id = lw_item.data(Qt.ItemDataRole.UserRole)
+                except Exception:
+                    item_id = None
             item_obj = self.history.get_item_by_id(item_id)
             if item_obj is None:
                 return
@@ -224,7 +257,11 @@ class MainWindow(QMainWindow):
             self.pause_status_label.setText('Paused (%d ms)' % (self._pause_ms,))
             self.pause_status_label.setVisible(True)
             self.watcher.set_text(out, pause_ms=self._pause_ms)
-            self.pause_status_label.setVisible(False)
+            # hide the pause label after the configured pause duration
+            try:
+                QTimer.singleShot(self._pause_ms, lambda: self.pause_status_label.setVisible(False))
+            except Exception:
+                self.pause_status_label.setVisible(False)
 
     def _on_secret_safe_toggled(self, state: int):
         enabled = (state == Qt.CheckState.Checked)
@@ -241,7 +278,17 @@ class MainWindow(QMainWindow):
         self.show()
         self.raise_()
         self.activateWindow()
-        self.search_box.setFocus()
+        try:
+            self.search_box.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+        except Exception:
+            try:
+                self.search_box.setFocus()
+            except Exception:
+                pass
+        try:
+            QApplication.processEvents()
+        except Exception:
+            pass
 
     def _on_app_capture_toggled(self, state: int):
         enabled = (state == Qt.CheckState.Checked)

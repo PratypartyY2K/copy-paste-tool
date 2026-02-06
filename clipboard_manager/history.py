@@ -1,11 +1,12 @@
-from clipboard_item import ClipboardItem
+from clipboard_manager.clipboard_item import ClipboardItem
 from collections import OrderedDict
 import hashlib
 import time
 from datetime import datetime
-from boards import BoardRouter
+from clipboard_manager.boards import BoardRouter
 import threading
 import re
+import os
 
 MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30
@@ -60,7 +61,8 @@ class HistoryStore:
         items = self._persistence.load_items()
         for r in items:
             try:
-                item = ClipboardItem(r['content'], source_app=r.get('source_app') or 'Unknown App')
+                stored_app = r.get('source_app') or 'Unknown App'
+                item = ClipboardItem(r['content'], source_app=self._normalize_source_app(stored_app))
                 item.id = r.get('id') or item.id
                 try:
                     item.timestamp = datetime.fromisoformat(r.get('timestamp'))
@@ -215,32 +217,49 @@ class HistoryStore:
             return None
 
         if not self.is_app_capture_enabled(source_app):
+            if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+                print('[clip-debug] history.add_item: capture disabled for app=%s' % (source_app,))
             return None
 
         if self._is_blocked_app(source_app):
+            if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+                print('[clip-debug] history.add_item: blocked app=%s (secret-safe)' % (source_app,))
             return None
+
+        # normalize source app naming (avoid 'Python' being stored)
+        source_app = self._normalize_source_app(source_app)
 
         h = hashlib.sha256(content.encode('utf-8')).hexdigest()
         now = time.time()
 
         with self._lock:
+            # If we've seen this hash recently, try to find a matching item for the same app.
             if h in self._recent_hashes:
                 for it in self.items:
-                    if it.content == content:
+                    if it.content == content and it.source_app == source_app:
                         try:
                             self._recent_hashes.move_to_end(h, last=False)
                         except Exception:
                             pass
+                        if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+                            print('[clip-debug] history.add_item: deduped per-app app=%s' % (source_app,))
                         return it
+                # same content but different app -> allow adding a separate item
+                if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+                    print('[clip-debug] history.add_item: seen content global but no per-app match; will add new item (app=%s)' % (source_app,))
 
             last_seen = self._last_seen_by_app.get((source_app, h))
             if last_seen is not None and (now - last_seen) <= APP_DEDUPE_SECONDS:
                 for it in self.items:
                     if it.content == content and it.source_app == source_app:
                         self._last_seen_by_app[(source_app, h)] = now
+                        if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+                            print('[clip-debug] history.add_item: suppressed duplicate within APP_DEDUPE_SECONDS for app=%s' % (source_app,))
                         return it
+                # No existing matching item found; update last seen and continue to add a new one
                 self._last_seen_by_app[(source_app, h)] = now
-                return None
+                if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+                    print('[clip-debug] history.add_item: recent same-app copy seen (no existing item), will add new item for app=%s' % (source_app,))
 
             is_temp = False
             expire_at = None
@@ -288,6 +307,8 @@ class HistoryStore:
                 except Exception:
                     pass
 
+        if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
+            print('[clip-debug] history.add_item: added item id=%s app=%s preview="%s"' % (item.id, source_app, (content or '')[:80].replace('\n','\\n')))
         self._notify_change()
         return item
 
@@ -344,6 +365,11 @@ class HistoryStore:
                 return True
             except Exception:
                 return False
+
+    def _normalize_source_app(self, name: str) -> str:
+        if not name:
+            return 'Unknown App'
+        return name.strip()
 
 
 History = HistoryStore

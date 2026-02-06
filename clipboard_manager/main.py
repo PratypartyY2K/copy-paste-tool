@@ -1,9 +1,15 @@
 import sys
 import os
-from PyQt6.QtWidgets import QApplication
-from gui import MainWindow
+import pathlib
+project_root = pathlib.Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
-# optional persistence: set CLIP_PERSISTENCE_DB env var to enable
+from PyQt6.QtWidgets import QApplication
+from clipboard_manager.gui import MainWindow
+
+NO_GUI = os.environ.get('CLIP_NO_GUI') == '1' or '--no-gui' in sys.argv
+
 DB_PATH = os.environ.get('CLIP_PERSISTENCE_DB')
 if DB_PATH:
     try:
@@ -14,9 +20,11 @@ if DB_PATH:
 else:
     persistence = None
 
-if __name__ == "__main__":
+if __name__ == '__main__':
+    if NO_GUI:
+        print('NO_GUI')
+        sys.exit(0)
     app = QApplication(sys.argv)
-    # inject persisted history when available
     if persistence:
         from clipboard_manager.history import History
         history = History(persistence=persistence)
@@ -25,7 +33,6 @@ if __name__ == "__main__":
         window = MainWindow()
     window.show()
     rc = app.exec()
-    # Ensure persistence is properly closed on exit
     try:
         if persistence:
             persistence.close()

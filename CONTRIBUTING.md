@@ -36,4 +36,7 @@ Contributor responsibilities
 Migration note
 - If your change touches the persistence schema (for example, the `board` column was removed), include migration scripts and add a dry-run mode so operators can inspect the effects before applying.
 
+Archived reference implementation
+- The `boards` routing implementation has been deprecated and archived in `archive/boards_reference.py`. If your contribution seeks to reintroduce or improve app-aware routing, reference the archived file and provide explicit tests and a migration plan.
+
 Thank you!

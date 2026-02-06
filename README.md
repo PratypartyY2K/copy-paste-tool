@@ -36,8 +36,10 @@ This tool watches the macOS clipboard and records copied text together with meta
 
 ## Features
 
-### Boards (deprecated)
-- NOTE: the earlier "Boards" auto-routing feature (Links, Code, Commands, Notes, Other) has been removed from active use and persisted storage. The DB column that previously contained board values has been dropped from new on-disk databases. The repo still contains an optional migration helper for existing databases (see "Data migration" below).
+### Boards (deprecated and archived)
+- NOTE: the earlier "Boards" auto-routing feature (Links, Code, Commands, Notes, Other) is deprecated and no longer used by the running application or by default persistence. The DB column that previously contained board values can be removed with the migration helper (see "Data migration" below).
+
+The legacy routing implementation is preserved for reference in `archive/boards_reference.py` if you wish to inspect or re-enable it. Keeping an archived copy lets you re-introduce a rules-based router safely in the future without relying on the deprecated on-disk `board` column.
 
 > Why removed: boards were causing persistent misclassification and added complexity. The core manager still supports app attribution, pins, search, and clip actions.
 

@@ -81,6 +81,12 @@ PYTHONPATH=. python scripts/drop_board_column.py --db ./.local/persistence.db
 PYTHONPATH=. python scripts/drop_board_column.py --db ./.local/persistence.db --apply
 ```
 
+Archived reference implementation
+---------------------------------
+The board-routing rules engine has been deprecated and archived. If you need to inspect the legacy implementation, see `archive/boards_reference.py`.
+
+If you plan to revive board routing in the future, the recommended approach is to externalize rules as a JSON file and load them via a small rules engine (the archived file contains an example `BoardRouter` and `Board` enum you can reuse).
+
 CI notes
 --------
 - The GitHub Actions workflow runs unit tests and coverage checks. See `.github/workflows/ci.yml`.

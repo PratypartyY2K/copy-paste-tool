@@ -11,7 +11,6 @@ def test_persistence_save_and_load(tmp_path):
     now = time.time()
     it = h.add_item('persist test ' + str(now), source_app='Tester', timestamp=now)
     assert it is not None
-    # reload persistence acceess
     p2 = Persistence(str(db))
     items = p2.load_items()
     assert any(r['id'] == it.id for r in items)

@@ -26,10 +26,8 @@ def test_app_capture_toggle():
 
 def test_recent_hashes_lru_trim():
     hs = HistoryStore()
-    # insert MAX_RECENT_HASHES + 5 distinct items
     for i in range(MAX_RECENT_HASHES + 5):
         hs.add_item(f'unique-{i}', source_app='App')
-    # ensure recent hashes size does not exceed constant
     assert len(hs._recent_hashes) <= MAX_RECENT_HASHES
 
 
@@ -38,11 +36,8 @@ def test_per_app_dedupe_window():
     content = 'dup-test'
     it1 = hs.add_item(content, source_app='AppX')
     assert it1 is not None
-    # repeat within dedupe window -> should return existing item or None depending on logic
     it2 = hs.add_item(content, source_app='AppX')
     assert it2 is not None
-    # wait beyond window
     time.sleep(APP_DEDUPE_SECONDS + 0.5)
     it3 = hs.add_item(content, source_app='AppX')
-    # after window, new item allowed (may be a new object)
     assert it3 is not None

@@ -29,7 +29,6 @@ class Persistence:
     def __init__(self, db_path: str):
         self.db_path = os.path.abspath(db_path)
         os.makedirs(os.path.dirname(self.db_path) or '.', exist_ok=True)
-        # enable multithread access; use check_same_thread=False
         self.conn = sqlite3.connect(self.db_path, timeout=30, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self._apply_pragmas()
@@ -37,7 +36,6 @@ class Persistence:
 
     def _apply_pragmas(self):
         cur = self.conn.cursor()
-        # Use WAL for better concurrency and performance on CI/runners
         try:
             cur.execute('PRAGMA journal_mode=WAL;')
         except Exception:
@@ -72,7 +70,6 @@ class Persistence:
                 'content': r['content'],
                 'source_app': r['source_app'],
                 'timestamp': r['timestamp'],
-                # board column removed; return None for compatibility
                 'board': None,
                 'is_temporary': bool(r['is_temporary']),
                 'expire_at': r['expire_at'],
@@ -102,7 +99,6 @@ class Persistence:
         self.conn.commit()
 
     def update_item(self, item) -> None:
-        # same as save_item (INSERT OR REPLACE covers it)
         self.save_item(item)
 
     def load_settings(self) -> Dict[str, str]:

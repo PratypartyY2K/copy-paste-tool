@@ -4,7 +4,6 @@ from clipboard_manager.boards import BoardRouter, Board
 def test_rules_serialization_and_set():
     r = BoardRouter()
     spec = r.rules_as_spec()
-    # set same spec back
     r.set_rules(spec)
     assert isinstance(r.route('Chrome', 'https://x.com'), Board)
 

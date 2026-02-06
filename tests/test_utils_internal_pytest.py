@@ -5,20 +5,16 @@ from clipboard_manager import utils
 
 
 def test_get_frontmost_app_osascript_consecutive(monkeypatch):
-    # Force no pyobjc so osascript path used
     monkeypatch.setattr(utils, '_try_load_pyobjc', lambda: False)
     class FakeCompleted:
         def __init__(self, out='MyApp'):
             self.stdout = out
-    # return same value repeatedly
     monkeypatch.setattr(subprocess, 'run', lambda *a, **k: FakeCompleted('MyApp'))
-    # make sampling short and require small consecutive
     monkeypatch.setenv('OSASCRIPT_SAMPLES', '6')
     monkeypatch.setenv('OSASCRIPT_CONSECUTE', '2')
     monkeypatch.setenv('OSASCRIPT_DELAY', '0.001')
     res = utils.get_frontmost_app()
     assert res is not None and res.lower() == 'myapp'
-    # cleanup env
     monkeypatch.delenv('OSASCRIPT_SAMPLES', raising=False)
     monkeypatch.delenv('OSASCRIPT_CONSECUTE', raising=False)
     monkeypatch.delenv('OSASCRIPT_DELAY', raising=False)
@@ -42,7 +38,6 @@ def test_get_frontmost_app_osascript_freq_choice(monkeypatch):
     monkeypatch.setenv('OSASCRIPT_MIN_COUNT', '2')
     monkeypatch.setenv('OSASCRIPT_DELAY', '0.001')
     res = utils.get_frontmost_app()
-    # 'A' appears 3 times -> should be chosen (function normalizes to lowercase)
     assert res is not None and res.lower() == 'a'
     monkeypatch.delenv('OSASCRIPT_SAMPLES', raising=False)
     monkeypatch.delenv('OSASCRIPT_MIN_COUNT', raising=False)
@@ -50,7 +45,6 @@ def test_get_frontmost_app_osascript_freq_choice(monkeypatch):
 
 
 def test_internal_appkit_ax_mouse_helpers(monkeypatch):
-    # Test _get_app_from_appkit
     dummy_app = types.SimpleNamespace()
     dummy_active = types.SimpleNamespace()
     dummy_active.localizedName = lambda: 'AppKitApp'
@@ -62,7 +56,6 @@ def test_internal_appkit_ax_mouse_helpers(monkeypatch):
     monkeypatch.setattr(utils, '_AppKit', dummy_AppKit)
     assert utils._get_app_from_appkit() == 'AppKitApp'
 
-    # Test _get_app_from_ax
     class DummyQuartz:
         def AXIsProcessTrusted(self):
             return True
@@ -73,7 +66,6 @@ def test_internal_appkit_ax_mouse_helpers(monkeypatch):
         def AXUIElementGetPid(self, focused):
             return 12345
     dummy_quartz = DummyQuartz()
-    # Running app mapping
     class FakeRA:
         def localizedName(self):
             return 'AXApp'
@@ -84,7 +76,6 @@ def test_internal_appkit_ax_mouse_helpers(monkeypatch):
     val_ax = utils._get_app_from_ax()
     assert val_ax is None or val_ax == 'AXApp'
 
-    # Test _get_app_from_mouse_window
     class MQ:
         def CGEventGetLocation(self, _):
             return types.SimpleNamespace(x=50, y=50)
@@ -93,7 +84,6 @@ def test_internal_appkit_ax_mouse_helpers(monkeypatch):
                 {'kCGWindowBounds': {'X': 0, 'Y': 0, 'Width': 100, 'Height': 100}, 'kCGWindowOwnerName': 'MouseApp'}
             ]
     mq = MQ()
-    # provide the constants expected by the implementation
     mq.kCGWindowListOptionOnScreenOnly = 1
     mq.kCGNullWindowID = 0
     monkeypatch.setattr(utils, '_Quartz', mq)
@@ -107,7 +97,6 @@ def test_get_top_window_owners_no_pyobjc(monkeypatch):
 
 
 def test_timeline_probes_monkeypatched(monkeypatch):
-    # quick run
     monkeypatch.setattr(subprocess, 'run', lambda *a, **k: types.SimpleNamespace(stdout='X'))
     monkeypatch.setattr(utils, '_get_app_from_appkit', lambda: 'AK')
     monkeypatch.setattr(utils, '_get_app_from_ax', lambda: 'AX')

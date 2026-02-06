@@ -7,7 +7,6 @@ class ClipboardItem:
         self.content = content
         self.source_app = source_app
         self.timestamp = datetime.now()
-        # board is optional; None means boarding is disabled
         self.board = board if board is not None else None
         self.is_temporary = is_temporary
         self.expire_at = expire_at

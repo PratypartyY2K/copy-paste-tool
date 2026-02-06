@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# scripts/monitor_db.py
 import time
 from clipboard_manager.storage import Persistence
 

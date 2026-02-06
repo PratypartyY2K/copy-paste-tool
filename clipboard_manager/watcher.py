@@ -6,7 +6,6 @@ from datetime import datetime
 import os
 from collections import deque
 
-# Tunable helpers (env-backed)
 def _env_float(name: str, default: float) -> float:
     try:
         return float(os.environ.get(name, str(default)))
@@ -19,7 +18,6 @@ def _env_int(name: str, default: int) -> int:
     except Exception:
         return default
 
-# Default tunables
 DEFAULT_LOOKBACK = _env_float('CP_LOOKBACK_SECONDS', 2.5)
 DEFAULT_FREQ_LOOKBACK = _env_float('CP_FREQ_LOOKBACK_SECONDS', 5.0)
 OWNER_MIN_SCORE = _env_int('CP_MIN_OWNER_SCORE', 0)
@@ -38,26 +36,18 @@ class ClipboardWatcher(QObject):
         self.clipboard.dataChanged.connect(self._on_clipboard_change)
         self._ignore_until = 0.0
 
-        # derive names that represent this running process to avoid self-attribution
         try:
             import sys
             self._self_names = set([os.path.basename(sys.executable).lower(), os.path.splitext(os.path.basename(sys.argv[0]))[0].lower(), 'python', 'python3', 'clipboard'])
         except Exception:
             self._self_names = set(['python', 'python3', 'clipboard'])
 
-        # macOS clipboard attribution is timing-sensitive: by the time Qt emits dataChanged,
-        # focus has often already switched (commonly to the IDE / this app), causing mis-attribution.
-        # We continuously sample the frontmost app and keep a short history so we can attribute
-        # the clipboard change to the most recently-active *non-self* app.
-        self._app_history = deque(maxlen=80)  # (timestamp, app_name)
+        self._app_history = deque(maxlen=80)
         self._last_sampled_app = None
 
-        # If pyobjc is available on macOS, register for NSWorkspace activation notifications
-        # for deterministic frontmost-app events. Otherwise fall back to periodic sampling.
         self._use_appkit_notifications = False
         try:
             if is_pyobjc_available():
-                # Setup AppKit observer lazily (import inside try to avoid import-time failures)
                 try:
                     from AppKit import NSWorkspace, NSWorkspaceDidActivateApplicationNotification
                     from Foundation import NSObject
@@ -85,13 +75,11 @@ class ClipboardWatcher(QObject):
                             except Exception:
                                 pass
 
-                    # register observer
                     self._appkit_observer = _AppkitObserver.alloc().initWithWatcher_(self)
                     nc = NSWorkspace.sharedWorkspace().notificationCenter()
                     nc.addObserver_selector_name_object_(self._appkit_observer, 'appActivated:', NSWorkspaceDidActivateApplicationNotification, None)
                     self._use_appkit_notifications = True
                 except Exception:
-                    # Import failed; fall back to timer-based sampling
                     self._use_appkit_notifications = False
         except Exception:
             self._use_appkit_notifications = False
@@ -99,9 +87,8 @@ class ClipboardWatcher(QObject):
         if not self._use_appkit_notifications:
             self._app_timer = QTimer(self)
             self._app_timer.timeout.connect(self._capture_active_app)
-            self._app_timer.start(150)  # ms; low overhead, good enough for attribution
+            self._app_timer.start(150)
 
-        # Seed history with current frontmost app to avoid empty-history at startup
         try:
             try:
                 initial = get_frontmost_app()
@@ -128,12 +115,10 @@ class ClipboardWatcher(QObject):
             nl = norm.lower() if norm else ''
             if not norm or nl.strip() == '':
                 return
-            # ignore self process names and noisy/system owners
             if any(sn in nl for sn in self._self_names):
                 return
             if any(ign in nl for ign in self._IGNORED_OWNERS):
                 return
-            # Only record on change to keep history meaningful
             if norm != self._last_sampled_app:
                 self._last_sampled_app = norm
                 self._app_history.append((time.time(), norm))
@@ -161,7 +146,6 @@ class ClipboardWatcher(QObject):
             self._last_sampled_app = norm
             self._app_history.append((time.time(), norm))
 
-    # Normalization map (substring -> canonical name)
     _NORMALIZE_MAP = [
         ("visual studio code", "Visual Studio Code"),
         ("code -", "Visual Studio Code"),
@@ -179,7 +163,6 @@ class ClipboardWatcher(QObject):
         ("teams", "Microsoft Teams"),
     ]
 
-    # Owner blacklist (lowercase substrings to ignore or penalize heavily)
     _IGNORED_OWNERS = [
         'window server', 'grace', 'displaylink', 'display link', 'control center', 'grizzly', 'grap', 'grm', 'gr', 'dock',
         'fontd', 'kernel_task'
@@ -200,31 +183,23 @@ class ClipboardWatcher(QObject):
         if not owner_name:
             return -999
         n = owner_name.lower()
-        # ignore self/terminal/python processes
         if any(k in n for k in ('clipboard', 'copy-paste-tool', 'python', 'python3', 'terminal', 'iterm')):
             return -999
-        # penalize ignored owners
         if any(ign in n for ign in self._IGNORED_OWNERS):
             return -999
         score = 0
-        # browsers
         if any(k in n for k in ('brave', 'chrome', 'safari', 'firefox', 'edge', 'opera')):
             score += OWNER_WEIGHT_BROWSER
-        # communication apps
         if any(k in n for k in ('discord', 'slack', 'teams')):
             score += OWNER_WEIGHT_COMM
-        # IDEs
         if any(k in n for k in ('pycharm', 'intellij', 'vscode', 'sublime', 'atom', 'webstorm', 'visual studio code')):
             score += OWNER_WEIGHT_IDE
-        # small non-empty boost
         score += 1
-        # content boosts
         if text_lower:
             if any(tok in text_lower for tok in ('http://', 'https://', 'www.')) and any(k in n for k in ('brave', 'chrome', 'safari', 'firefox', 'edge', 'opera')):
                 score += OWNER_CONTENT_BOOST
             if code_like and any(k in n for k in ('pycharm', 'intellij', 'vscode', 'sublime')):
                 score += OWNER_CODE_BOOST
-            # slight boost if owner contains words from snippet
             try:
                 for part in text_lower.split():
                     if part and part in n:
@@ -240,7 +215,6 @@ class ClipboardWatcher(QObject):
         """
         LOOKBACK = DEFAULT_LOOKBACK
 
-        # helpers to classify names
         def is_browser_name(n: str) -> bool:
             nl = n.lower()
             return any(k in nl for k in ('brave', 'chrome', 'safari', 'firefox', 'edge', 'opera'))
@@ -261,9 +235,7 @@ class ClipboardWatcher(QObject):
             return None
 
         cutoff = ts - LOOKBACK
-        # 1) If code-like content, prefer an IDE that matches the detected language
         if code_like:
-            # mapping from language_hint to IDE substrings to prefer
             lang_map = {
                 'python': ('pycharm', 'intellij'),
                 'javascript': ('vscode', 'visual studio code', 'webstorm'),
@@ -272,7 +244,6 @@ class ClipboardWatcher(QObject):
             preferred_ides = ()
             if language_hint and language_hint in lang_map:
                 preferred_ides = lang_map[language_hint]
-            # Strong rule: if language_hint given, try to find the canonical IDE name present in history and return its most recent occurrence
             if language_hint:
                 canonical_map = {
                     'python': 'PyCharm',
@@ -281,7 +252,6 @@ class ClipboardWatcher(QObject):
                 }
                 target = canonical_map.get(language_hint)
                 if target:
-                    # find most recent occurrence of target in history within a wider freq lookback
                     freq_cutoff = ts - DEFAULT_FREQ_LOOKBACK
                     for t, name in reversed(self._app_history):
                         if t < freq_cutoff:
@@ -294,7 +264,6 @@ class ClipboardWatcher(QObject):
                             continue
                         if target.lower() in name.lower():
                             return self._normalize_app_name(name)
-            # first try to find most-recent preferred IDE
             if preferred_ides:
                 for t, name in reversed(self._app_history):
                     if t < cutoff:
@@ -308,7 +277,6 @@ class ClipboardWatcher(QObject):
                     nl = name.lower()
                     if any(pid in nl for pid in preferred_ides):
                         return self._normalize_app_name(name)
-            # otherwise fallback to any IDE most recent
             for t, name in reversed(self._app_history):
                 if t < cutoff:
                     break
@@ -321,10 +289,6 @@ class ClipboardWatcher(QObject):
                 if is_ide(name):
                     return self._normalize_app_name(name)
 
-        # 2) If URL-like content (caller may pass this), prefer most-recent browser
-        # Note: caller currently doesn't pass url_like; we'll handle simple content heuristics here
-        # but keep backward compatibility by checking code_like only.
-        # collect candidates within lookback window
         freq = {}
         last_seen = {}
         for t, name in self._app_history:
@@ -344,7 +308,6 @@ class ClipboardWatcher(QObject):
         if not freq:
             return None
 
-        # Strong rule: if language_hint maps to a canonical IDE and it's present in recent freq, prefer it
         if language_hint:
             canonical_map = {
                 'python': 'PyCharm',
@@ -357,7 +320,6 @@ class ClipboardWatcher(QObject):
                     if tgt.lower() in k.lower() or k.lower() in tgt.lower():
                         return tgt
 
-        # 3) Prefer the most recent non-IDE app (good for notes/communication)
         for t, name in reversed(self._app_history):
             if t < cutoff:
                 break
@@ -370,7 +332,6 @@ class ClipboardWatcher(QObject):
             if not is_ide(name):
                 return self._normalize_app_name(name)
 
-        # 4) Fallback: score by recency+frequency as before
         best = None
         best_score = -1.0
         now = ts
@@ -404,15 +365,10 @@ class ClipboardWatcher(QObject):
             return
         ts = now
 
-        # Emit Unknown immediately to avoid blocking the UI. Compute refined attribution in background
-        # and re-emit the result once available.
         try:
-            # fast debug dump
             if os.environ.get('CLIP_DEBUG') == '2':
                 print('--- clip-debug-verbose ---')
                 print('timestamp:', datetime.fromtimestamp(ts).isoformat())
-                # Avoid calling get_frontmost_app here; it's blocking (osascript/AppKit) and
-                # can introduce delays when debug is enabled. Rely on last_sampled_app and history.
                 print('frontmost_probe: <skipped in debug to avoid blocking>')
                 print('last_sampled_app:', self._last_sampled_app)
                 try:
@@ -430,16 +386,12 @@ class ClipboardWatcher(QObject):
         except Exception:
             pass
 
-        # Choose the history entry nearest to the clipboard timestamp within window.
-        # Prefer the most recent entry at or before ts (within pre_margin); otherwise
-        # accept the earliest entry after ts within post_margin.
         pre_ms = int(os.environ.get('CP_PRE_MARGIN_MS', '500') or '500')
         post_ms = int(os.environ.get('CP_POST_MARGIN_MS', '50') or '50')
         pre_margin = float(pre_ms) / 1000.0
         post_margin = float(post_ms) / 1000.0
         chosen = None
         try:
-            # collect candidates within [ts - pre_margin, ts + post_margin]
             candidates = []
             for t, name in self._app_history:
                 try:
@@ -450,7 +402,6 @@ class ClipboardWatcher(QObject):
                 except Exception:
                     continue
             if candidates:
-                # Score candidates by recency and type weight to prefer browsers/IDEs over communication apps
                 def type_weight(name):
                     nl = name.lower()
                     if any(k in nl for k in ('brave', 'chrome', 'safari', 'firefox', 'edge', 'opera')):
@@ -478,8 +429,7 @@ class ClipboardWatcher(QObject):
         except Exception:
             pass
 
-        # Final deterministic emit: prefer chosen history candidate, then last_sampled_app, then Unknown
-        self._ignore_until = ts + 0.1  # ignore brief bursts
+        self._ignore_until = ts + 0.1
         final_app = None
         if chosen:
             final_app = self._normalize_app_name(chosen)
@@ -491,7 +441,6 @@ class ClipboardWatcher(QObject):
         if os.environ.get('CLIP_DEBUG') == '2':
             print("[clip-debug] %s final_emit app=%s" % (datetime.fromtimestamp(ts).isoformat(), final_app))
 
-        # debug output: include short preview of text to help diagnose missing items/delays
         if os.environ.get('CLIP_DEBUG') == '2':
             try:
                 preview = (text or '')[:200].replace('\n', '\\n')
@@ -516,13 +465,11 @@ class ClipboardWatcher(QObject):
     def set_text(self, text: str, pause_ms: int = 300):
         """Set clipboard text programmatically and pause capture to avoid self-attribution."""
         try:
-            # Use the instance clipboard (allows tests to monkeypatch self.clipboard)
             cb = getattr(self, 'clipboard', None) or QApplication.clipboard()
             cb.setText(str(text))
         except Exception:
             pass
         try:
-            # pause capture briefly
             self.pause(pause_ms)
             if os.environ.get('CLIP_DEBUG') == '2':
                 print("[clip-debug] set_text called; paused for %d ms" % (pause_ms,))

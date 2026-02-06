@@ -29,7 +29,6 @@ def test_get_frontmost_app_fallback(monkeypatch):
 
 
 def test_get_frontmost_app_appkit(monkeypatch):
-    # Simulate pyobjc available and appkit returning a stable app
     monkeypatch.setattr(utils, '_try_load_pyobjc', lambda: True)
     monkeypatch.setattr(utils, '_get_app_from_appkit', lambda: 'MyApp')
     monkeypatch.setattr(subprocess, 'run', lambda *a, **k: subprocess.CompletedProcess(args=a, returncode=0, stdout=''))

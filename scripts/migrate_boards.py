@@ -7,7 +7,7 @@ correct the stored `board` column. Useful after fixing BoardRouter/History bugs.
 
 Usage:
   python scripts/migrate_boards.py --db ./.local/persistence.db --apply
-  python scripts/migrate_boards.py --db ./.local/persistence.db        # dry-run
+  python scripts/migrate_boards.py --db ./.local/persistence.db
 
 The script prints a summary and can optionally apply updates in-place.
 """
@@ -15,12 +15,10 @@ import sqlite3
 import argparse
 import os
 import sys
-# ensure repo root is available on sys.path so clipboard_manager can be imported
 _repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-# Try to import the package; if it fails, print diagnostics to help the user.
 try:
     from clipboard_manager.boards import BoardRouter
 except Exception as exc:

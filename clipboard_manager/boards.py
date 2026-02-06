@@ -35,7 +35,6 @@ class _Predicate:
         if typ == 'content_regex':
             return bool(self._compiled and self._compiled.search(content))
         if typ == 'startswith':
-            # field selects which string to check
             target = app if self.field == 'app' else content
             return target.startswith(self.value)
         if typ == 'always':
@@ -46,7 +45,6 @@ class _Rule:
     def __init__(self, spec: Dict[str, Any]):
         preds = spec.get('predicates')
         if preds is None:
-            # single predicate shorthand
             preds = [ {k:v for k,v in spec.items() if k in ('type','value','pattern','field')} ]
         self.predicates = [_Predicate(p) for p in preds if p]
         board_val = spec.get('board')
@@ -54,7 +52,6 @@ class _Rule:
             try:
                 self.board = Board[board_val.upper()]
             except Exception:
-                # allow value same as enum value
                 self.board = next((b for b in Board if b.value == board_val), Board.OTHER)
         else:
             self.board = Board.OTHER
@@ -66,7 +63,6 @@ class _Rule:
 
 class BoardRouter:
     _default_rules_spec = [
-        # browser + url -> LINKS
         { 'predicates': [
             {'type': 'app_contains', 'value': 'chrome'},
             {'type': 'content_regex', 'pattern': r'https?://'},
@@ -79,7 +75,6 @@ class BoardRouter:
             {'type': 'app_contains', 'value': 'firefox'},
             {'type': 'content_regex', 'pattern': r'https?://'},
         ], 'board': 'LINKS'},
-        # terminal-like -> COMMANDS
         {'predicates': [
             {'type':'app_contains','value':'terminal'},
             {'type':'content_contains','value':'$'}
@@ -88,7 +83,6 @@ class BoardRouter:
             {'type':'app_contains','value':'iterm'},
             {'type':'content_contains','value':'$'}
         ], 'board':'COMMANDS'},
-        # editors -> CODE
         {'predicates': [
             {'type':'app_contains','value':'vscode'},
             {'type':'content_contains','value':'{'}
@@ -97,11 +91,9 @@ class BoardRouter:
             {'type':'app_contains','value':'visual studio code'},
             {'type':'content_contains','value':'{'}
         ], 'board':'CODE'},
-        # generic heuristics
         {'predicates':[{'type':'content_regex','pattern': r'https?://'}], 'board':'LINKS'},
         {'predicates':[{'type':'content_contains','value':'$'}], 'board':'COMMANDS'},
         {'predicates':[{'type':'content_contains','value':'{'}], 'board':'CODE'},
-        # default
         {'predicates':[{'type':'always','value':True}], 'board':'NOTES'}
     ]
 
@@ -125,7 +117,6 @@ class BoardRouter:
         item.board = self.route(getattr(item, 'source_app', None), getattr(item, 'content', None))
 
     def rules_as_spec(self) -> List[Dict[str, Any]]:
-        # best-effort: we don't serialize compiled regexes back; return original simple spec
         out = []
         for r in self._rules:
             spec = { 'predicates': [], 'board': r.board.name }

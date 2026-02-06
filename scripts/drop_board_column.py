@@ -12,7 +12,7 @@ Approach (SQLite safe pattern):
 
 Usage:
   python scripts/drop_board_column.py --db ./.local/persistence.db --apply
-  python scripts/drop_board_column.py --db ./.local/persistence.db    # dry-run (shows what would happen)
+  python scripts/drop_board_column.py --db ./.local/persistence.db
 
 Note: The script will BACKUP the DB to `<db>.bak` before applying changes.
 """
@@ -42,7 +42,6 @@ def migrate(db_path: str, apply: bool = False):
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
 
-    # Check existing items schema columns
     cur.execute("PRAGMA table_info(items)")
     cols = [r[1] for r in cur.fetchall()]
     print('Existing columns in items:', cols)
@@ -51,12 +50,10 @@ def migrate(db_path: str, apply: bool = False):
         conn.close()
         return
 
-    # Show counts
     cur.execute('SELECT COUNT(*) FROM items')
     total = cur.fetchone()[0]
     print('Total items rows:', total)
 
-    # Show sample of current rows
     cur.execute('SELECT id, board, source_app, substr(content,1,80) AS preview FROM items LIMIT 5')
     print('\nSample rows (before):')
     for r in cur.fetchall():
@@ -67,27 +64,20 @@ def migrate(db_path: str, apply: bool = False):
         conn.close()
         return
 
-    # Backup
     bak = db_path + '.bak'
     print('\nBacking up DB to', bak)
     shutil.copy2(db_path, bak)
 
-    # Start migration in transaction
     try:
-        # create new table
         cur.executescript(SCHEMA_ITEMS_NEW)
-        # copy data over (omit board column)
         cur.execute("INSERT INTO items_new (id, content, source_app, timestamp, is_temporary, expire_at, pinned) SELECT id, content, source_app, timestamp, is_temporary, expire_at, pinned FROM items;")
-        # drop old table
         cur.execute('DROP TABLE items')
-        # rename
         cur.execute('ALTER TABLE items_new RENAME TO items')
         conn.commit()
         print('Migration completed successfully.')
     except Exception as e:
         conn.rollback()
         print('Migration failed:', e)
-        # attempt to restore from backup
         try:
             shutil.copy2(bak, db_path)
             print('Restored DB from backup.')

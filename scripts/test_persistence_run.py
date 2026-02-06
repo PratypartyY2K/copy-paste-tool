@@ -11,17 +11,13 @@ from clipboard_manager.history import History
 
 DB_PATH = os.path.abspath('./.local/persistence.db')
 print('Using DB:', DB_PATH)
-# ensure directory
 os.makedirs(os.path.dirname(DB_PATH) or '.', exist_ok=True)
 
 p = Persistence(DB_PATH)
-# create history backed by persistence
 h = History(persistence=p)
-# add a test item
 now = time.time()
 item = h.add_item('persistence test content - %s' % (time.ctime(now),), source_app='TestApp', timestamp=now)
 print('History.add_item returned:', getattr(item, 'id', None))
-# load items directly from persistence and print
 rows = p.load_items()
 print('Rows in DB:')
 for r in rows:

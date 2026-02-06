@@ -109,15 +109,12 @@ class MainWindow(QMainWindow):
                 print('[clip-debug] gui: history.add_item returned id=%s' % (item.id,))
             self.update_apps_dropdown()
             try:
-                # auto-select the app that produced the new item so users see it immediately
                 self.app_dropdown.setCurrentText(item.source_app)
             except Exception:
                 pass
             self.update_list()
             try:
-                # scroll to newly added item if present
                 from PyQt6.QtWidgets import QListWidgetItem
-                # find the list item with this id
                 for i in range(self.list_widget.count()):
                     lw = self.list_widget.item(i)
                     try:
@@ -219,7 +216,6 @@ class MainWindow(QMainWindow):
                 item_id = lw_item.data(int(Qt.ItemDataRole.UserRole))
             except Exception:
                 try:
-                    # fallback: older PyQt versions may accept the enum directly
                     item_id = lw_item.data(Qt.ItemDataRole.UserRole)
                 except Exception:
                     item_id = None
@@ -257,7 +253,6 @@ class MainWindow(QMainWindow):
             self.pause_status_label.setText('Paused (%d ms)' % (self._pause_ms,))
             self.pause_status_label.setVisible(True)
             self.watcher.set_text(out, pause_ms=self._pause_ms)
-            # hide the pause label after the configured pause duration
             try:
                 QTimer.singleShot(self._pause_ms, lambda: self.pause_status_label.setVisible(False))
             except Exception:
@@ -275,9 +270,6 @@ class MainWindow(QMainWindow):
             self.history.set_blocklist(entries)
 
     def _on_hotkey_open(self):
-        # Try to reliably show the window and set focus on the search box.
-        # Some platforms (and CI runners) require event loop flushes and deferred
-        # focus setting for the widget to actually receive keyboard focus.
         try:
             QApplication.processEvents()
         except Exception:
@@ -289,7 +281,6 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
-        # Defer setting focus to allow the window system to finish activation.
         try:
             def _set_focus():
                 try:
@@ -300,10 +291,8 @@ class MainWindow(QMainWindow):
                     except Exception:
                         pass
             QTimer.singleShot(0, _set_focus)
-            # allow a short time for the focus to propagate then try a few immediate retries
             QTimer.singleShot(50, lambda: QApplication.processEvents())
             try:
-                # Try a few quick synchronous focus attempts to improve reliability in headless CI
                 for _ in range(3):
                     try:
                         self.search_box.setFocus(Qt.FocusReason.ActiveWindowFocusReason)

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import os, sys
-# Ensure repo root is on sys.path so clipboard_manager can be imported when running this script directly
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
@@ -40,13 +39,9 @@ out.append('score_discord_url=%d' % w.score_owner('Discord', url.lower(), True, 
 out.append('score_pycharm_code=%d' % w.score_owner('PyCharm', code.lower(), True, True))
 out.append('score_vscode_code=%d' % w.score_owner('Visual Studio Code', code.lower(), True, True))
 
-# picks for events
-# 1: notes-like
 out.append('event1=' + repr(w._pick_recent_source_app(now, allow_ide=True, code_like=False)))
-# 2: PyCharm code (python)
 lang_py = 'python'
 out.append('event2=' + repr(w._pick_recent_source_app(now, allow_ide=True, code_like=True, language_hint=lang_py)))
-# 3: VSCode code (javascript)
 lang_js = 'javascript'
 out.append('event3=' + repr(w._pick_recent_source_app(now, allow_ide=True, code_like=True, language_hint=lang_js)))
 

@@ -8,7 +8,6 @@ def main():
     app = QApplication([])
     w = MainWindow()
     w.show()
-    # process one event loop iteration to ensure widgets initialize
     app.processEvents()
     print('GUI_STARTUP_OK')
 

@@ -110,7 +110,6 @@ def _get_app_from_mouse_window() -> Optional[str]:
         mx = float(getattr(pt, 'x', 0))
         my = float(getattr(pt, 'y', 0))
         wins = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID)
-        # windows are front-to-back; pick first containing mouse
         for w in wins:
             try:
                 bounds = w.get('kCGWindowBounds') or {}
@@ -162,14 +161,10 @@ def find_window_owner_by_content(snippet: str) -> Optional[str]:
         return None
 
 
-# osascript-only get_frontmost_app with stability requirement
 def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
     cl_debug = int(os.environ.get('CLIP_DEBUG', '0') or '0')
 
 
-    # Early probe: check whether subprocess.run works reliably.
-    # We do a few quick attempts; if every attempt raises a non-Timeout exception,
-    # treat subprocess.run as broken (this matches test monkeypatch behavior).
     try:
         probe_works = False
         hard_exceptions = 0
@@ -183,14 +178,10 @@ def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
                 probe_works = True
                 break
             except subprocess.TimeoutExpired:
-                # treat as transient; continue trying
                 continue
             except Exception:
                 hard_exceptions += 1
-                # continue trying a few times to avoid transient issues
                 continue
-        # If subprocess.run never succeeded and at least one hard exception occurred,
-        # consider subprocess.run to be broken and return Unknown App (test expectation).
         if not probe_works and hard_exceptions >= attempts:
             if cl_debug >= 1:
                 print("[clip-debug] %s method='early-osascript-check' failed (hard exceptions); returning 'Unknown App'" % (datetime.now(timezone.utc).isoformat(),))
@@ -198,7 +189,6 @@ def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
     except Exception:
         pass
 
-    # helper: is a name usable
     def usable(name: Optional[str]):
         if not name:
             return False
@@ -210,7 +200,6 @@ def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
             return False
         return True
 
-    # 1) Try AppKit sampling for stability (fast)
     if _try_load_pyobjc():
         appkit_samples = []
         appkit_attempts = int(os.environ.get('APPKIT_SAMPLES', '5'))
@@ -222,7 +211,6 @@ def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
                 a = None
             appkit_samples.append(a)
             time.sleep(appkit_delay)
-        # normalize and count
         freq = {}
         for v in appkit_samples:
             if usable(v):
@@ -230,12 +218,10 @@ def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
         if freq:
             sorted_items = sorted(freq.items(), key=lambda x: (-x[1], x[0]))
             candidate, count = sorted_items[0]
-            # require at least 2 consistent samples (tunable)
             if count >= int(os.environ.get('APPKIT_MIN_COUNT', '2')):
                 if cl_debug >= 1:
                     print("[clip-debug] %s method='appkit-sampled' result='%s' count=%d preview='%s'" % (datetime.now(timezone.utc).isoformat(), candidate, count, (content_snippet or '')[:120]))
                 return candidate
-    # 2) Next try AX if trusted and available
     try:
         if _try_load_pyobjc() and is_ax_trusted():
             ax_samples = []
@@ -262,7 +248,6 @@ def get_frontmost_app(content_snippet: Optional[str] = None) -> str:
     except Exception:
         pass
 
-    # 3) Fallback: enhanced osascript sampling
     interpreter_names = {os.path.basename(sys.executable).lower(), os.path.splitext(os.path.basename(sys.argv[0]))[0].lower(), 'python', 'python3'}
     samples = []
     raw_samples = []
@@ -367,7 +352,6 @@ def probe_frontmost_methods(content_snippet: Optional[str] = None) -> dict:
     Keys: osascript_single, osascript_samples, appkit, ax, mouse_window_owner, by_content
     """
     result = {}
-    # single osascript
     try:
         res = subprocess.run(
             ['osascript', '-e', 'tell application "System Events" to get name of first application process whose frontmost is true'],
@@ -378,7 +362,6 @@ def probe_frontmost_methods(content_snippet: Optional[str] = None) -> dict:
         single = None
     result['osascript_single'] = single
 
-    # osascript samples
     samples = []
     for _ in range(7):
         try:
@@ -393,28 +376,24 @@ def probe_frontmost_methods(content_snippet: Optional[str] = None) -> dict:
         time.sleep(0.02)
     result['osascript_samples'] = samples
 
-    # native AppKit
     try:
         appkit_name = _get_app_from_appkit()
     except Exception:
         appkit_name = None
     result['appkit'] = appkit_name
 
-    # native AX
     try:
         ax_name = _get_app_from_ax()
     except Exception:
         ax_name = None
     result['ax'] = ax_name
 
-    # mouse window
     try:
         mouse_owner = _get_app_from_mouse_window()
     except Exception:
         mouse_owner = None
     result['mouse_window_owner'] = mouse_owner
 
-    # by content
     try:
         by_content = find_window_owner_by_content((content_snippet or '')[:200])
     except Exception:
@@ -430,7 +409,6 @@ def trim_whitespace(s: str) -> str:
 
 def copy_one_line(s: str) -> str:
     import re
-    # collapse whitespace and newlines into single spaces and trim
     return re.sub(r"\s+", " ", s).strip()
 
 
@@ -481,10 +459,8 @@ def fuzzy_score(text: str, query: str) -> int:
         return 100
     s = str(text)
     q = str(query)
-    # If substring, give a high score proportional to length
     if q.lower() in s.lower():
         return 100
-    # fallback to sequence matcher
     ratio = difflib.SequenceMatcher(a=s.lower(), b=q.lower()).ratio()
     return int(ratio * 100)
 

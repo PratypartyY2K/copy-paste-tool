@@ -5,13 +5,11 @@ from clipboard_manager import utils
 
 
 def test_probe_frontmost_methods_monkeypatched(monkeypatch):
-    # Simulate subprocess.run returning a CompletedProcess-like object
     class FakeCompleted:
         def __init__(self, out='OSA'):
             self.stdout = out
     monkeypatch.setattr(subprocess, 'run', lambda *a, **k: FakeCompleted('OSA'))
 
-    # monkeypatch native probes
     monkeypatch.setattr(utils, '_get_app_from_appkit', lambda: 'AK')
     monkeypatch.setattr(utils, '_get_app_from_ax', lambda: 'AX')
     monkeypatch.setattr(utils, '_get_app_from_mouse_window', lambda: 'MW')
@@ -28,7 +26,6 @@ def test_probe_frontmost_methods_monkeypatched(monkeypatch):
 
 
 def test_get_top_window_owners_monkeypatched(monkeypatch):
-    # Simulate Quartz returning window info
     dummy_quartz = types.SimpleNamespace()
     def fake_CGWindowListCopyWindowInfo(opt, nullid):
         return [
@@ -63,7 +60,6 @@ def test_find_window_owner_by_content_with_pyobjc(monkeypatch):
 
 
 def test_probe_frontmost_methods_handles_errors(monkeypatch):
-    # Make subprocess.run raise and native probes return None
     monkeypatch.setattr(subprocess, 'run', lambda *a, **k: (_ for _ in ()).throw(RuntimeError('fail')))
     monkeypatch.setattr(utils, '_get_app_from_appkit', lambda: None)
     monkeypatch.setattr(utils, '_get_app_from_ax', lambda: None)

@@ -30,13 +30,10 @@ class HistoryStore:
         self.secret_safe_enabled = True
         self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
 
-        # per-app capture toggles; True means capture enabled (default True)
         self._app_capture_enabled = {}
 
-        # lightweight observer callbacks (callable[[], None])
         self._change_listeners = []
 
-        # persistence (optional) - object with load_items/save_item/delete_item/load_settings/save_setting
         self._persistence = persistence
         if self._persistence:
             try:
@@ -67,13 +64,11 @@ class HistoryStore:
                     item.timestamp = datetime.fromisoformat(r.get('timestamp'))
                 except Exception:
                     pass
-                # legacy stored board string (kept for compatibility); we won't convert to enum
                 try:
                     stored_board = r.get('board')
                     item._legacy_board = stored_board if stored_board else None
                 except Exception:
                     item._legacy_board = None
-                # board feature disabled; set to None
                 item.board = None
                 item.is_temporary = bool(r.get('is_temporary'))
                 item.expire_at = r.get('expire_at')
@@ -228,14 +223,12 @@ class HistoryStore:
                 print('[clip-debug] history.add_item: blocked app=%s (secret-safe)' % (source_app,))
             return None
 
-        # normalize source app naming (avoid 'Python' being stored)
         source_app = self._normalize_source_app(source_app)
 
         h = hashlib.sha256(content.encode('utf-8')).hexdigest()
         now = time.time()
 
         with self._lock:
-            # If we've seen this hash recently, try to find a matching item for the same app.
             if h in self._recent_hashes:
                 for it in self.items:
                     if it.content == content and it.source_app == source_app:
@@ -246,7 +239,6 @@ class HistoryStore:
                         if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
                             print('[clip-debug] history.add_item: deduped per-app app=%s' % (source_app,))
                         return it
-                # same content but different app -> allow adding a separate item
                 if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
                     print('[clip-debug] history.add_item: seen content global but no per-app match; will add new item (app=%s)' % (source_app,))
 
@@ -258,7 +250,6 @@ class HistoryStore:
                         if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
                             print('[clip-debug] history.add_item: suppressed duplicate within APP_DEDUPE_SECONDS for app=%s' % (source_app,))
                         return it
-                # No existing matching item found; update last seen and continue to add a new one
                 self._last_seen_by_app[(source_app, h)] = now
                 if int(os.environ.get('CLIP_DEBUG', '0') or '0') >= 2:
                     print('[clip-debug] history.add_item: recent same-app copy seen (no existing item), will add new item for app=%s' % (source_app,))
@@ -270,8 +261,6 @@ class HistoryStore:
                 expire_at = now + TEMPORARY_TOKEN_SECONDS
 
             item = ClipboardItem(content, source_app, is_temporary=is_temp, expire_at=expire_at)
-            # Board routing disabled: item.board remains None
-            # (legacy stored board available in item._legacy_board)
             pass
 
             if timestamp is not None:
@@ -301,7 +290,6 @@ class HistoryStore:
             if is_temp:
                 self._start_cleanup_thread()
 
-            # persist
             if self._persistence:
                 try:
                     self._persistence.save_item(item)

@@ -516,7 +516,8 @@ class ClipboardWatcher(QObject):
     def set_text(self, text: str, pause_ms: int = 300):
         """Set clipboard text programmatically and pause capture to avoid self-attribution."""
         try:
-            cb = QApplication.clipboard()
+            # Use the instance clipboard (allows tests to monkeypatch self.clipboard)
+            cb = getattr(self, 'clipboard', None) or QApplication.clipboard()
             cb.setText(str(text))
         except Exception:
             pass

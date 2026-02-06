@@ -23,7 +23,12 @@ def test_search_focus_hotkey(app, qtbot):
     w = MainWindow()
     qtbot.addWidget(w)
     w.show()
+    # Ensure window is shown and exposed before trying to focus
+    qtbot.waitExposed(w)
     # simulate hotkey activation by calling handler
     w._on_hotkey_open()
+    # Flush event loop after hotkey and give focus some time to propagate
+    app.processEvents()
+    qtbot.wait(100)
     assert w.search_box.hasFocus()
     w.close()

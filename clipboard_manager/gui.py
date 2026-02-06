@@ -275,20 +275,38 @@ class MainWindow(QMainWindow):
             self.history.set_blocklist(entries)
 
     def _on_hotkey_open(self):
-        self.show()
-        self.raise_()
-        self.activateWindow()
+        # Try to reliably show the window and set focus on the search box.
+        # Some platforms (and CI runners) require event loop flushes and deferred
+        # focus setting for the widget to actually receive keyboard focus.
         try:
-            self.search_box.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+            QApplication.processEvents()
+        except Exception:
+            pass
+        try:
+            self.show()
+            self.raise_()
+            self.activateWindow()
+        except Exception:
+            pass
+
+        # Defer setting focus to allow the window system to finish activation.
+        try:
+            def _set_focus():
+                try:
+                    self.search_box.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+                except Exception:
+                    try:
+                        self.search_box.setFocus()
+                    except Exception:
+                        pass
+            QTimer.singleShot(0, _set_focus)
+            # allow a short time for the focus to propagate
+            QTimer.singleShot(50, lambda: QApplication.processEvents())
         except Exception:
             try:
                 self.search_box.setFocus()
             except Exception:
                 pass
-        try:
-            QApplication.processEvents()
-        except Exception:
-            pass
 
     def _on_app_capture_toggled(self, state: int):
         enabled = (state == Qt.CheckState.Checked)

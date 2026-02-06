@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copy-paste-tool"
+version = "0.1.0"
+description = "App-aware clipboard manager (lightweight)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [ { name = "(you)", email = "" } ]
+keywords = ["clipboard", "pyqt", "productivity"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+]
+
+[project.dependencies]
+PyQt6 = ">=6.10.2"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.4.0",
+    "pytest-qt>=4.5.0",
+    "pytest-cov>=4.0.0",
+]
+gui = ["PyQt6>=6.10.2", "pyobjc-framework-AppKit>=10.0"]
+dev = ["rapidfuzz>=2.3.0", "black>=24.1.0", "flake8>=6.0.0"]
+
+[tool.setuptools]
+packages = ["clipboard_manager"]

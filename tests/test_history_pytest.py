@@ -23,3 +23,22 @@ def test_token_temporary():
         assert all(x.content != tkn for x in h.items)
     finally:
         hmod.TEMPORARY_TOKEN_SECONDS = orig
+
+
+def test_blocklist_and_per_app_dedupe():
+    h = HistoryStore()
+    h.set_secret_safe_enabled(True)
+    # include a substring that matches the test app name '1Password' (case-insensitive)
+    h.set_blocklist(['1password', 'keychain'])
+    # blocklisted app should be ignored
+    item = h.add_item('secret', source_app='1Password')
+    assert item is None
+
+    # per-app dedupe
+    it_a1 = h.add_item('dup content', source_app='AppA')
+    assert it_a1 is not None
+    it_a2 = h.add_item('dup content', source_app='AppA')
+    assert it_a2 is it_a1
+    # same content from different app should be allowed
+    it_b = h.add_item('dup content', source_app='AppB')
+    assert it_b is not None and it_b.id != it_a1.id

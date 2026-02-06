@@ -99,7 +99,7 @@ If you have an existing `.venv` in the repo, run the app using its Python binary
 UI walkthrough
 
 Main controls
-- Pause (ms): when the app programmatically copies text back to the clipboard, the watcher pauses capture for this duration (default 500 ms) to avoid re-capturing the same content.
+- Pause (ms): when the app programmatically copies text back to the clipboard, the watcher pauses capture for this duration (default 300 ms in the UI) to avoid re-capturing the same content.
 - App dropdown: filter history by the source application. When no app is selected, the list is empty.
 - Search box: filters the visible items for the selected app/board. It searches item content and board names.
 - Secret-safe mode (checkbox): enable/disable the secret-safe heuristics.
@@ -153,6 +153,45 @@ Notes:
 - Settings saved: `secret_safe_enabled` and `blocklist_apps`.
 - Items are saved on capture and updates (pin/unpin) and temporary token items are auto-deleted after their configured lifetime.
 - To disable persistence, unset `CLIP_PERSISTENCE_DB` or run the app normally.
+
+Persistence: quick test & monitor
+
+You can run a tiny smoke test that writes an item through the normal `History` + `Persistence` flow and then prints the DB rows. A test script is included at `scripts/test_persistence_run.py`:
+
+```bash
+PYTHONPATH=. python3 scripts/test_persistence_run.py
+```
+
+To actively monitor the DB for new rows (handy while reproducing copy flows), you can run a small monitor script (see `scripts/monitor_db.py`). It polls the DB and prints newly-observed items. Example:
+
+```bash
+PYTHONPATH=. python3 scripts/monitor_db.py
+```
+
+Tunable environment variables
+-----------------------------------
+The watcher and attribution logic expose several environment-backed tunables useful for debugging and adapting to different machines. These are safe to set in your shell before launching the app.
+
+- `CP_PRE_MARGIN_MS` — pre-copy margin (ms) to consider recent focus history when attributing a clipboard event (default 500)
+- `CP_POST_MARGIN_MS` — post-copy margin (ms) to include short delays after the clipboard event (default 50)
+- `CP_LOOKBACK_SECONDS` — how many seconds of app-activation history to consult for attribution (default ~2.5)
+- `CP_FREQ_LOOKBACK_SECONDS` — wider lookback for frequency-based heuristics (default ~5.0)
+- `APPKIT_SAMPLES`, `APPKIT_DELAY`, `APPKIT_MIN_COUNT` — sampling knobs when using AppKit/pyobjc
+- `AX_SAMPLES`, `AX_DELAY`, `AX_MIN_COUNT` — sampling knobs for Accessibility probe
+- `OSASCRIPT_SAMPLES`, `OSASCRIPT_DELAY`, `OSASCRIPT_MIN_COUNT`, `OSASCRIPT_CONSECUTE` — osascript sampling settings
+
+Debug helpers
+----------------
+- `CLIP_DEBUG=1` prints concise attribution logs.
+- `CLIP_DEBUG=2` prints verbose sampling/debug dumps (useful when tuning attribution and dedupe).
+
+Example: run with more permissive post margin and verbose debug:
+
+```bash
+export CP_POST_MARGIN_MS=100
+export CLIP_DEBUG=2
+PYTHONPATH=. python3 -m clipboard_manager.main
+```
 
 
 Developer notes & architecture

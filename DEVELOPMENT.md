@@ -1,92 +1,88 @@
-DEVELOPMENT GUIDE
-=================
+# Development Guide
 
-This document helps contributors set up a local development environment, run the app and tests, and follow the project's conventions.
+This document provides steps to set up a development environment, run the app locally, write tests, and work with CI.
 
 Prerequisites
 -------------
-- macOS (the repo contains AppleScript helpers for `get_frontmost_app`)
-- Python 3.11 (or a compatible Python 3.x)
-- git
+- Python 3.11+ recommended
+- macOS (preferred) for frontmost-app attribution; many features are macOS-specific (pyobjc, osascript)
+- Optional: Xvfb on Linux if you need to run GUI tests in headless CI
 
-Recommended workflow
---------------------
-1. Create and activate a virtual environment from the project root:
+Setup
+-----
+1. Create and activate a virtualenv (recommended):
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-```
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    python -m pip install --upgrade pip setuptools wheel
+    python -m pip install -r requirements.txt
+    python -m pip install -r requirements-ci.txt
+    ```
 
-2. Install runtime/test dependencies (PyQt6 and pytest are required for the GUI tests):
+2. Install PyQt6 into your active venv:
 
-```bash
-python -m pip install -r requirements-ci.txt
-```
+    ```bash
+    python -m pip install PyQt6
+    ```
 
-3. Run the app locally (with venv active):
-
-```bash
-python clipboard_manager/main.py
-```
-
-CI and coverage
+Running the app
 ----------------
-This repository includes a GitHub Actions workflow at `.github/workflows/ci.yml`.
-- CI runs `pytest` in a headless environment using `xvfb` so GUI tests (pytest-qt) run reliably.
-- The workflow builds and caches a local wheelhouse to speed CI installs.
-- Coverage reports are uploaded to Codecov. If your repository requires a Codecov upload token, set the `CODECOV_TOKEN` repository secret.
+- Without persistence:
 
-Running tests locally
+    ```bash
+    python -m clipboard_manager.main
+    ```
+
+- With persistence enabled (stores history to SQLite):
+
+    ```bash
+    export CLIP_PERSISTENCE_DB=./.local/persistence.db
+    python -m clipboard_manager.main
+    ```
+
+Testing
+-------
+- Run the lightweight test scripts (smoke tests):
+
+    ```bash
+    python -m pytest -q --maxfail=1
+    ```
+
+- Or run individual scripts in `tests/` for focused checks. For GUI tests run via `pytest-qt` you may need Xvfb on CI or run on macOS directly.
+
+Style and linting
+-----------------
+- Keep code readable and documented. Follow typical Python conventions (PEP8). We don't enforce linting in CI currently, but you can run `flake8` locally if preferred.
+
+Debugging tips
+--------------
+- Enable runtime debug logging for clipboard attribution and history with:
+
+    ```bash
+    export CLIP_DEBUG=2
+    python -m clipboard_manager.main
+    ```
+
+- To inspect the persistence DB directly use sqlite3:
+
+    ```bash
+    sqlite3 ./.local/persistence.db "SELECT id, source_app, timestamp, substr(content,1,200) FROM items ORDER BY timestamp DESC LIMIT 50;"
+    ```
+
+CI notes
+--------
+- The GitHub Actions workflow runs unit tests and coverage checks. See `.github/workflows/ci.yml`.
+- Tests that require a display are run under Xvfb in CI; local developers can use Xvfb or run tests directly on macOS.
+
+Contributing workflow
 ---------------------
-Run unit and GUI tests with pytest:
+- Create a branch, add tests for new behavior; run the test suite locally; open a PR.
+- CI will run tests and post coverage (if enabled).
 
-```bash
-pytest -q --cov=clipboard_manager --cov-report=term-missing
-```
-
-If your platform does not have a display (Linux CI or headless dev machine), run GUI tests under Xvfb:
-
-```bash
-sudo apt-get install xvfb
-xvfb-run -s "-screen 0 1920x1080x24" pytest -q
-```
-
-Project layout (high level)
----------------------------
-- `clipboard_manager/` - main package
-  - `main.py` - entrypoint for GUI app
-  - `gui.py` - Qt UI
-  - `watcher.py` - clipboard watcher and pause behavior
-  - `history.py` - history store, dedupe, secret-safe, pins
-  - `clipboard_item.py` - data model for items
-  - `boards.py` - board enum & routing heuristics (rules engine)
-  - `utils.py` - small helpers (token detection, transforms, apple script)
-- `tests/` - pytest-based unit and GUI tests
-- `README.md` - user-facing documentation
-- `DEVELOPMENT.md`, `CONTRIBUTING.md` - developer docs
-
-Running tests in CI locally (debugging)
----------------------------------------
-You can emulate CI locally by running tests under Xvfb and ensuring the same dependencies are installed:
-
-```bash
-xvfb-run -s "-screen 0 1920x1080x24" pytest -q --cov=clipboard_manager --cov-report=xml
-```
-
-If tests behave differently in CI, check `requirements-ci.txt` and system packages (Xvfb, mesa libs) in the runner.
-
-Coding style & conventions
--------------------------
-- Keep code modular: `watcher` handles capture, `history` handles storage/dedupe/notifications, and `gui` handles display.
-- Use stable item IDs (`ClipboardItem.id`) for any UI actions; do not rely on list indices.
-- Keep long-running or blocking operations off the Qt main thread; use signals or `QTimer.singleShot(0, ...)` to schedule UI updates.
-- Thread-safety: `HistoryStore` uses an RLock — hold it when mutating shared state.
-
-Adding tests
-------------
-- Add pytest test files under `tests/` using `test_*.py` naming.
-- GUI tests may use `pytest-qt` fixtures (e.g., `qtbot`) to manage widgets and event loops.
+Maintenance
+-----------
+- Keep dependencies current in `requirements.txt` and `requirements-ci.txt`.
+- Keep `codecov.yml` and `.github/workflows/ci.yml` updated when adding new test requirements.
 
 Last updated: 2026-02-05

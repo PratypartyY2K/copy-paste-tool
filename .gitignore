@@ -1,11 +1,73 @@
-.venv
-.idea
+.venv/
+.idea/
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 .DS_Store
 .env
-.vscode
+.vscode/
 logs/
 *.log
 data/
 output/
+.coverage
+.coverage.*
+.pytest_cache/
+.local/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+.env
+.env.*
+venv/
+ENV/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# macOS
+.DS_Store
+
+# Test and build outputs
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# SQLite persistence files and WAL
+.local/
+# If you use a different path for DB, add it to the ignore
+*.db
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+
+# Packaging
+dist/
+build/
+*.egg-info/
+
+# Temporary files
+*.swp
+*~
+
+# Intentionally exclude secrets
+secrets.*
+
+# Operating-system specific
+Thumbs.db
+
+# JetBrains caches
+out/
+
+# End of file

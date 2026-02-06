@@ -300,8 +300,26 @@ class MainWindow(QMainWindow):
                     except Exception:
                         pass
             QTimer.singleShot(0, _set_focus)
-            # allow a short time for the focus to propagate
+            # allow a short time for the focus to propagate then try a few immediate retries
             QTimer.singleShot(50, lambda: QApplication.processEvents())
+            try:
+                # Try a few quick synchronous focus attempts to improve reliability in headless CI
+                for _ in range(3):
+                    try:
+                        self.search_box.setFocus(Qt.FocusReason.ActiveWindowFocusReason)
+                    except Exception:
+                        try:
+                            self.search_box.setFocus()
+                        except Exception:
+                            pass
+                    try:
+                        QApplication.processEvents()
+                    except Exception:
+                        pass
+                    if self.search_box.hasFocus():
+                        break
+            except Exception:
+                pass
         except Exception:
             try:
                 self.search_box.setFocus()

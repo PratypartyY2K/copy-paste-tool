@@ -33,4 +33,7 @@ Contributor responsibilities
 - Be responsive to review comments and willing to iterate.
 - Add tests for bug fixes and new features.
 
+Migration note
+- If your change touches the persistence schema (for example, the `board` column was removed), include migration scripts and add a dry-run mode so operators can inspect the effects before applying.
+
 Thank you!

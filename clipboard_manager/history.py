@@ -3,7 +3,6 @@ from collections import OrderedDict
 import hashlib
 import time
 from datetime import datetime
-from clipboard_manager.boards import BoardRouter
 import threading
 import re
 import os
@@ -68,11 +67,14 @@ class HistoryStore:
                     item.timestamp = datetime.fromisoformat(r.get('timestamp'))
                 except Exception:
                     pass
-                # board stored as name
+                # legacy stored board string (kept for compatibility); we won't convert to enum
                 try:
-                    item.board = getattr(item.board, 'name', r.get('board'))
+                    stored_board = r.get('board')
+                    item._legacy_board = stored_board if stored_board else None
                 except Exception:
-                    pass
+                    item._legacy_board = None
+                # board feature disabled; set to None
+                item.board = None
                 item.is_temporary = bool(r.get('is_temporary'))
                 item.expire_at = r.get('expire_at')
                 item.pinned = bool(r.get('pinned'))
@@ -268,10 +270,9 @@ class HistoryStore:
                 expire_at = now + TEMPORARY_TOKEN_SECONDS
 
             item = ClipboardItem(content, source_app, is_temporary=is_temp, expire_at=expire_at)
-            try:
-                BoardRouter.assign_board_to_item(item)
-            except Exception:
-                pass
+            # Board routing disabled: item.board remains None
+            # (legacy stored board available in item._legacy_board)
+            pass
 
             if timestamp is not None:
                 try:

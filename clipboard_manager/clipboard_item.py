@@ -1,14 +1,14 @@
 from datetime import datetime
 import uuid
-from clipboard_manager.boards import Board
 
 class ClipboardItem:
-    def __init__(self, content, source_app="Unknown App", board: Board = None, is_temporary: bool = False, expire_at: float = None, pinned: bool = False):
+    def __init__(self, content, source_app="Unknown App", board=None, is_temporary: bool = False, expire_at: float = None, pinned: bool = False):
         self.id = uuid.uuid4().hex
         self.content = content
         self.source_app = source_app
         self.timestamp = datetime.now()
-        self.board = board or Board.OTHER
+        # board is optional; None means boarding is disabled
+        self.board = board if board is not None else None
         self.is_temporary = is_temporary
         self.expire_at = expire_at
         self.pinned = pinned

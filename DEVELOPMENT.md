@@ -70,6 +70,17 @@ Debugging tips
     sqlite3 ./.local/persistence.db "SELECT id, source_app, timestamp, substr(content,1,200) FROM items ORDER BY timestamp DESC LIMIT 50;"
     ```
 
+Schema migrations
+-----------------
+- The project previously stored a `board` column in the `items` table; that column has been removed in favor of a simpler history model.
+- Use the provided migration helper to drop the `board` column safely (dry-run first):
+
+```bash
+PYTHONPATH=. python scripts/drop_board_column.py --db ./.local/persistence.db
+# if you are satisfied with dry-run results
+PYTHONPATH=. python scripts/drop_board_column.py --db ./.local/persistence.db --apply
+```
+
 CI notes
 --------
 - The GitHub Actions workflow runs unit tests and coverage checks. See `.github/workflows/ci.yml`.
@@ -85,4 +96,8 @@ Maintenance
 - Keep dependencies current in `requirements.txt` and `requirements-ci.txt`.
 - Keep `codecov.yml` and `.github/workflows/ci.yml` updated when adding new test requirements.
 
-Last updated: 2026-02-05
+Security
+--------
+- Please report any security vulnerabilities to the maintainers privately, and do not disclose them publicly until they are addressed.
+
+Last updated: 2026-02-06

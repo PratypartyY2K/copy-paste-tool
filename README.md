@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![CI](https://github.com/PratypartyY2K/copy-paste-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/PratypartyY2K/copy-paste-tool/actions) [![Codecov](https://codecov.io/gh/PratypartyY2K/copy-paste-tool/branch/main/graph/badge.svg)](https://codecov.io/gh/PratypartyY2K/copy-paste-tool)
 
-A lightweight, macOS-focused clipboard manager built with PyQt6. It captures text copies, attributes them to the source application, and presents an app-aware UI with advanced developer-friendly utilities.
+A lightweight, macOS-focused clipboard manager built with PyQt6. It captures text copies, attributes them to the source application, and presents an app-aware UI with developer-friendly utilities.
 
-This README covers: installation, key features (Boards, Secret-safe mode, Pins, Search, Clip Actions), usage, configuration, developer notes, and troubleshooting.
+This README covers: installation, key features (Secret-safe mode, Pins, Search, Clip Actions), usage, configuration, developer notes, and troubleshooting.
 
 ---
 
@@ -31,14 +31,15 @@ This tool watches the macOS clipboard and records copied text together with meta
 - **Correctness**: avoid re-capturing programmatic copies and attribute the frontmost application at capture time.
 - **Efficiency**: use Qt clipboard signals (no polling) for accuracy and low CPU usage.
 - **Security-aware**: provide a Secret-safe mode that avoids storing sensitive content from password/auth apps and token-like clipboard contents.
-- **Productivity features**: search, pins, boards (auto-routing), and developer-friendly clip actions.
+- **Productivity features**: search, pins, and developer-friendly clip actions.
 
 
 ## Features
 
-### Boards (auto-routing)
-- The app automatically routes clipboard content into a few boards (Links, Code, Commands, Notes, Other) using heuristics based on the source application and content.
-- Example heuristics: browser + URL → Links; Terminal → Commands; VS Code → Code.
+### Boards (deprecated)
+- NOTE: the earlier "Boards" auto-routing feature (Links, Code, Commands, Notes, Other) has been removed from active use and persisted storage. The DB column that previously contained board values has been dropped from new on-disk databases. The repo still contains an optional migration helper for existing databases (see "Data migration" below).
+
+> Why removed: boards were causing persistent misclassification and added complexity. The core manager still supports app attribution, pins, search, and clip actions.
 
 ### Secret-safe mode (trust)
 - Blocklisted apps (password managers, authenticators, Keychain entries) are not stored when Secret-safe mode is enabled.
@@ -50,8 +51,8 @@ This tool watches the macOS clipboard and records copied text together with meta
 - Pin/Unpin is available from the context menu.
 
 ### Search
-- A search box filters the visible history for the currently selected app/board.
-- The window can be shown & search focused via a hotkey (default: Ctrl+`).
+- A search box filters the visible history for the currently selected app.
+- The window can be shown & search focused via an in-app hotkey (default: Ctrl+`). Note: this is an in-app hotkey, not a global system hotkey.
 
 ### Clip Actions (developer-friendly)
 - Right-click an item to run transformations before copying to clipboard:
@@ -101,21 +102,46 @@ If you have an existing `.venv` in the repo, run the app using its Python binary
 ### Main controls
 - **Pause (ms)**: when the app programmatically copies text back to the clipboard, the watcher pauses capture for this duration (default 300 ms in the UI) to avoid re-capturing the same content.
 - **App dropdown**: filter history by the source application. When no app is selected, the list is empty.
-- **Search box**: filters the visible items for the selected app/board. It searches item content and board names.
+- **Search box**: filters the visible items for the selected app. It searches item content and (where available) legacy board metadata.
 - **Secret-safe mode (checkbox)**: enable/disable the secret-safe heuristics.
 - **Edit Blocklist**: opens a small editor where you can add/remove app name substrings to block from capture.
 - **Per-app capture toggle**: enable or disable capture for the currently-selected app (useful to stop capturing from a specific app without blocking it globally).
 - **Context menu (right-click on an item)**: copy, clip actions (trim, one-line, extract URLs, JSON-escape, camel/snake), Pin/Unpin.
 
 ### Hotkey
-- An in-app hotkey (Ctrl+`) shows the window and focuses the search box; this is NOT a system-wide/global hotkey. If you need a global hotkey, see the "Developer notes" section for implementation suggestions.
+- An in-app hotkey (Ctrl+`) shows the window and focuses the search box; this is NOT a system-wide/global hotkey.
+
+
+## Data migration (if you upgraded from an older version)
+If your existing local persistence DB was created by a prior release that stored `board` values, you may want to remove that column to match the current schema.
+
+A helper migration script is provided: `scripts/drop_board_column.py`.
+
+Dry-run (recommended):
+
+```bash
+PYTHONPATH=. python scripts/drop_board_column.py --db ./.local/persistence.db
+```
+
+Apply the migration (the script automatically creates a backup at `./.local/persistence.db.bak`):
+
+```bash
+PYTHONPATH=. python scripts/drop_board_column.py --db ./.local/persistence.db --apply
+```
+
+After applying, you can inspect the DB with sqlite3:
+
+```bash
+sqlite3 ./.local/persistence.db "PRAGMA table_info(items);"
+sqlite3 ./.local/persistence.db "SELECT COUNT(*) FROM items;"
+```
 
 
 ## Security & Privacy
 
 ### Defaults
 - Secret-safe mode is ON by default.
-- Persistence is OFF by default (history, pins, and settings are stored in memory only unless you enable persistence explicitly).
+- Persistence is OFF by default (history, pins, and settings are stored in memory only unless you enable persistence explicitly by setting `CLIP_PERSISTENCE_DB`).
 - Common sensitive apps are pre-populated into the blocklist (password managers, authenticators, keychain-like apps).
 
 ### Per-app controls
@@ -202,16 +228,9 @@ PYTHONPATH=. python3 -m clipboard_manager.main
 ### Key modules
 - `clipboard_manager/watcher.py` — `ClipboardWatcher` emits `clipboard_changed(content, source_app, timestamp)` and exposes `pause(ms)`, `resume()`, and `set_text(text, pause_ms)`.
 - `clipboard_manager/history.py` — `HistoryStore` handles dedupe, blocklist, token heuristics, temporary-marking and pin management. Exported alias: `History`.
-- `clipboard_manager/boards.py` — `Board` enum and a `BoardRouter` that routes clipboard content to a board using app + content heuristics.
+- `clipboard_manager/boards.py` — retained for reference only; board routing is no longer used for new persisted data.
 - `clipboard_manager/gui.py` — `MainWindow` renders the UI and uses stable item IDs for list rows.
-- `clipboard_manager/clipboard_item.py` — `ClipboardItem` model: id, content, source_app, timestamp, board, is_temporary, expire_at, pinned.
-
-### Configurable rules engine (boards routing)
-- The current routing heuristics live in `clipboard_manager/boards.py` and map app names and content patterns to boards (e.g., Links, Code, Commands, Notes). To customize routing you can:
-  - Edit `boards.py` where heuristics are implemented (small and easy for quick tweaks).
-  - For a more flexible approach, consider externalizing the rules as an ordered list of predicates (app substring, regex, content predicate) and target board (e.g., JSON or YAML). A minimal rules engine would evaluate rules in order: the first matching predicate assigns the board. This keeps routing maintainable as rules grow.
-
-If you'd like, I can add an external rules loader (JSON/YAML) and a small editor UI to manage rules without editing code.
+- `clipboard_manager/clipboard_item.py` — `ClipboardItem` model: id, content, source_app, timestamp, is_temporary, expire_at, pinned.
 
 ### Testing strategy
 - Unit tests cover utilities and critical behavior (dedupe, secret-safe heuristics, pin/unpin ordering).
@@ -272,7 +291,7 @@ If the CI badge link in the README is incorrect, replace the `your-org/your-repo
 
 ## Contributing
 
-- Create a branch, add tests for behavior changes (HistoryStore unit tests are quick), run the test scripts, and open a PR.
+- Create a branch, add tests for new behavior (HistoryStore unit tests are quick), run the test scripts, and open a PR.
 - Helpful areas: persist history, image/rich clipboard support, improve token heuristics, better search (fuzzy matching), keyboard shortcuts.
 
 ## License

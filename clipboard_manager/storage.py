@@ -9,7 +9,6 @@ CREATE TABLE IF NOT EXISTS items (
     content TEXT NOT NULL,
     source_app TEXT,
     timestamp TEXT,
-    board TEXT,
     is_temporary INTEGER DEFAULT 0,
     expire_at REAL NULL,
     pinned INTEGER DEFAULT 0
@@ -73,7 +72,8 @@ class Persistence:
                 'content': r['content'],
                 'source_app': r['source_app'],
                 'timestamp': r['timestamp'],
-                'board': r['board'],
+                # board column removed; return None for compatibility
+                'board': None,
                 'is_temporary': bool(r['is_temporary']),
                 'expire_at': r['expire_at'],
                 'pinned': bool(r['pinned']),
@@ -83,14 +83,13 @@ class Persistence:
     def save_item(self, item) -> None:
         cur = self.conn.cursor()
         cur.execute('''
-            INSERT OR REPLACE INTO items (id, content, source_app, timestamp, board, is_temporary, expire_at, pinned)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO items (id, content, source_app, timestamp, is_temporary, expire_at, pinned)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (
             item.id,
             item.content,
             item.source_app,
             item.timestamp.isoformat() if hasattr(item.timestamp, 'isoformat') else str(item.timestamp),
-            getattr(item.board, 'name', str(item.board)),
             1 if item.is_temporary else 0,
             item.expire_at,
             1 if item.pinned else 0,

@@ -121,6 +121,9 @@ Defaults
 Per-app controls
 - The UI exposes a "Per-app capture" toggle which lets you enable or disable capturing for the currently-selected app without altering the global blocklist.
 
+Accessibility permission (macOS)
+- For accurate frontmost-application attribution on macOS the app requires Accessibility privileges. If attribution shows as `Unknown App` or returns `Python` frequently, grant accessibility to either the Python interpreter used to run the app or to the packaged app binary: System Settings → Privacy & Security → Accessibility. After granting permission, restart the application and re-run with `CLIP_DEBUG=2` to verify attribution samples.
+
 Security notes
 - Token/JWT heuristics attempt to detect likely secrets and keep them temporary when Secret-safe mode is enabled; heuristics are conservative and may not catch all secrets. If you need stronger guarantees, avoid enabling persistence or implement secure encrypted storage.
 - If you enable persistence, consider encrypting persisted data or storing only metadata (timestamps, app names) depending on your threat model.
@@ -202,6 +205,13 @@ Key modules
 - `clipboard_manager/boards.py` — `Board` enum and a `BoardRouter` that routes clipboard content to a board using app + content heuristics.
 - `clipboard_manager/gui.py` — `MainWindow` renders the UI and uses stable item IDs for list rows.
 - `clipboard_manager/clipboard_item.py` — `ClipboardItem` model: id, content, source_app, timestamp, board, is_temporary, expire_at, pinned.
+
+Configurable rules engine (boards routing)
+- The current routing heuristics live in `clipboard_manager/boards.py` and map app names and content patterns to boards (e.g., Links, Code, Commands, Notes). To customize routing you can:
+  - Edit `boards.py` where heuristics are implemented (small and easy for quick tweaks).
+  - For a more flexible approach, consider externalizing the rules as an ordered list of predicates (app substring, regex, content predicate) and target board (e.g., JSON or YAML). A minimal rules engine would evaluate rules in order: the first matching predicate assigns the board. This keeps routing maintainable as rules grow.
+
+If you'd like, I can add an external rules loader (JSON/YAML) and a small editor UI to manage rules without editing code.
 
 Testing strategy
 - Unit tests cover utilities and critical behavior (dedupe, secret-safe heuristics, pin/unpin ordering).

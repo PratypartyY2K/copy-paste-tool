@@ -6,6 +6,7 @@ from datetime import datetime
 import threading
 import re
 import os
+from clipboard_manager import settings
 
 MAX_RECENT_HASHES = 200
 APP_DEDUPE_SECONDS = 30

@@ -68,12 +68,50 @@ class SettingsDialog(QDialog):
         self._pending_blocklist = list(settings.get('blocklist_apps', []) or [])
         self.edit_blocklist_btn.clicked.connect(self._on_edit_blocklist)
 
+        # Advanced section
+        adv_group_layout = QVBoxLayout()
+        adv_form = QFormLayout()
+        self.dedupe_lru_spin = QSpinBox()
+        self.dedupe_lru_spin.setRange(10, 5000)
+        self.dedupe_lru_spin.setSingleStep(10)
+        self.dedupe_lru_spin.setValue(int(settings.get('dedupe_lru_size', 200)))
+        adv_form.addRow('Dedupe LRU size:', self.dedupe_lru_spin)
+
+        self.dedupe_per_app_spin = QSpinBox()
+        self.dedupe_per_app_spin.setRange(1, 3600)
+        self.dedupe_per_app_spin.setSingleStep(1)
+        self.dedupe_per_app_spin.setValue(int(settings.get('dedupe_per_app_window_s', 30)))
+        adv_form.addRow('Per-app dedupe window (s):', self.dedupe_per_app_spin)
+
+        # per-app capture toggles editor (simple text form: app=1/app=0 per line)
+        self.per_app_text = QTextEdit()
+        per_app_map = settings.get('per_app_capture_toggle', {}) or {}
+        try:
+            if isinstance(per_app_map, dict):
+                lines = [f"{k}={1 if v else 0}" for k, v in per_app_map.items()]
+            else:
+                lines = []
+        except Exception:
+            lines = []
+        self.per_app_text.setPlainText('\n'.join(lines))
+        adv_form.addRow('Per-app capture (app=1/0 per line):', self.per_app_text)
+
+        adv_group_layout.addLayout(adv_form)
+        layout.addLayout(adv_group_layout)
+
+        # reset and action buttons
+        action_layout = QHBoxLayout()
+        self.reset_btn = QPushButton('Reset to defaults')
+        self.reset_btn.clicked.connect(self._on_reset)
+        action_layout.addWidget(self.reset_btn)
+
         buttons = QDialogButtonBox()
         apply_btn = buttons.addButton(QDialogButtonBox.StandardButton.Apply)
         close_btn = buttons.addButton(QDialogButtonBox.StandardButton.Close)
         apply_btn.clicked.connect(self._on_apply)
         close_btn.clicked.connect(self.accept)
-        layout.addWidget(buttons)
+        action_layout.addWidget(buttons)
+        layout.addLayout(action_layout)
 
         self.setLayout(layout)
 
@@ -91,10 +129,41 @@ class SettingsDialog(QDialog):
         settings.set_('persistence_enabled', bool(self.persistence_chk.isChecked()))
         # apply pending blocklist
         settings.set_('blocklist_apps', list(self._pending_blocklist or []))
+        # advanced settings
+        settings.set_('dedupe_lru_size', int(self.dedupe_lru_spin.value()))
+        settings.set_('dedupe_per_app_window_s', int(self.dedupe_per_app_spin.value()))
+        # per-app capture parsing
+        pam = {}
+        try:
+            for line in (self.per_app_text.toPlainText() or '').splitlines():
+                if '=' in line:
+                    k, v = line.split('=', 1)
+                    k = k.strip()
+                    v = v.strip()
+                    pam[k] = bool(int(v))
+        except Exception:
+            pam = settings.get('per_app_capture_toggle', {}) or {}
+        settings.set_('per_app_capture_toggle', pam)
         # commit to disk immediately since user explicitly applied
         settings.save_settings()
         # notify user via callbacks (callbacks already invoked by set_)
         # do not close the dialog on Apply; user can Close when done
+
+    def _on_reset(self):
+        # reset UI fields to defaults (in-memory, not persisted until Apply)
+        d = settings.DEFAULTS if hasattr(settings, 'DEFAULTS') else {}
+        try:
+            self.pause_spin.setValue(int(d.get('pause_after_set_ms', 500)))
+            self.secret_safe_chk.setChecked(bool(d.get('secret_safe_mode', True)))
+            self.persistence_chk.setChecked(bool(d.get('persistence_enabled', False)))
+            self.dedupe_lru_spin.setValue(int(d.get('dedupe_lru_size', 200)))
+            self.dedupe_per_app_spin.setValue(int(d.get('dedupe_per_app_window_s', 30)))
+            per_map = d.get('per_app_capture_toggle', {}) or {}
+            lines = [f"{k}={1 if v else 0}" for k, v in per_map.items()]
+            self.per_app_text.setPlainText('\n'.join(lines))
+            self._pending_blocklist = list(d.get('blocklist_apps', []))
+        except Exception:
+            pass
 
     def closeEvent(self, event):
         try:

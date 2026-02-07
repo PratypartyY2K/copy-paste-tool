@@ -41,6 +41,7 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout()
 
         form = QFormLayout()
+        # Basic settings
         self.pause_spin = QSpinBox()
         self.pause_spin.setRange(0, 5000)
         self.pause_spin.setSingleStep(50)
@@ -57,37 +58,50 @@ class SettingsDialog(QDialog):
 
         layout.addLayout(form)
 
+        # Blocklist editor quick access
         bl_layout = QHBoxLayout()
         self.edit_blocklist_btn = QPushButton('Edit blocklist')
         bl_layout.addWidget(self.edit_blocklist_btn)
         layout.addLayout(bl_layout)
         self.blocklist_btn = self.edit_blocklist_btn
+        # keep blocklist edits local until Apply
+        self._pending_blocklist = list(settings.get('blocklist_apps', []) or [])
         self.edit_blocklist_btn.clicked.connect(self._on_edit_blocklist)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Cancel)
-        buttons.accepted.connect(self._on_apply)
-        buttons.rejected.connect(self.reject)
+        buttons = QDialogButtonBox()
+        apply_btn = buttons.addButton(QDialogButtonBox.StandardButton.Apply)
+        close_btn = buttons.addButton(QDialogButtonBox.StandardButton.Close)
+        apply_btn.clicked.connect(self._on_apply)
+        close_btn.clicked.connect(self.accept)
         layout.addWidget(buttons)
 
         self.setLayout(layout)
 
     def _on_edit_blocklist(self):
-        initial = settings.get('blocklist_apps', [])
-        if isinstance(initial, list):
-            initial_list = initial
-        else:
-            initial_list = list(initial)
+        initial_list = list(self._pending_blocklist or [])
         editor = BlocklistEditor(self, initial_blocklist=initial_list)
         if editor.exec() == QDialog.DialogCode.Accepted:
             entries = editor.get_entries()
-            settings.set_('blocklist_apps', entries)
+            self._pending_blocklist = entries
 
     def _on_apply(self):
+        # Apply settings immediately and keep dialog open
         settings.set_('pause_after_set_ms', int(self.pause_spin.value()))
         settings.set_('secret_safe_mode', bool(self.secret_safe_chk.isChecked()))
         settings.set_('persistence_enabled', bool(self.persistence_chk.isChecked()))
+        # apply pending blocklist
+        settings.set_('blocklist_apps', list(self._pending_blocklist or []))
+        # commit to disk immediately since user explicitly applied
         settings.save_settings()
-        self.accept()
+        # notify user via callbacks (callbacks already invoked by set_)
+        # do not close the dialog on Apply; user can Close when done
+
+    def closeEvent(self, event):
+        try:
+            self.history.remove_change_listener(self._history_listener)
+        except Exception:
+            pass
+        return super(MainWindow, self).closeEvent(event)
 
 
 class MainWindow(QMainWindow):

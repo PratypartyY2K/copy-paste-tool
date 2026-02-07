@@ -7,10 +7,19 @@ if str(project_root) not in sys.path:
 
 from PyQt6.QtWidgets import QApplication
 from clipboard_manager.gui import MainWindow
+from clipboard_manager import settings
 
 NO_GUI = os.environ.get('CLIP_NO_GUI') == '1' or '--no-gui' in sys.argv
 
+# Prefer explicit env var for DB path, otherwise fall back to settings
 DB_PATH = os.environ.get('CLIP_PERSISTENCE_DB')
+if not DB_PATH:
+    try:
+        if settings.get('persistence_enabled'):
+            DB_PATH = settings.get('persistence_path') or os.path.expanduser('~/.local/persistence.db')
+    except Exception:
+        DB_PATH = None
+
 if DB_PATH:
     try:
         from clipboard_manager.storage import Persistence

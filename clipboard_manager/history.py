@@ -27,7 +27,12 @@ class HistoryStore:
         self._cleanup_thread = None
         self._cleanup_event = threading.Event()
 
-        self.secret_safe_enabled = True
+        # initialize secret-safe flag from settings (defaults to True)
+        try:
+            self.secret_safe_enabled = bool(settings.get('secret_safe_mode', True))
+        except Exception:
+            self.secret_safe_enabled = True
+
         self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
 
         self._app_capture_enabled = {}
@@ -40,6 +45,28 @@ class HistoryStore:
                 self._load_from_persistence()
             except Exception:
                 pass
+
+        # register for runtime settings changes to keep in sync
+        try:
+            settings.register_callback(self._on_setting_changed)
+        except Exception:
+            pass
+
+    def _on_setting_changed(self, key, value):
+        try:
+            if key == 'secret_safe_mode':
+                self.set_secret_safe_enabled(bool(value))
+            if key == 'blocklist_apps':
+                # value might be list or newline string
+                if isinstance(value, (list, tuple)):
+                    entries = value
+                elif isinstance(value, str):
+                    entries = [s.strip() for s in value.split('\n') if s.strip()]
+                else:
+                    entries = []
+                self.set_blocklist(entries)
+        except Exception:
+            pass
 
     def _load_from_persistence(self):
         data = self._persistence.load_settings()

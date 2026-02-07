@@ -33,6 +33,63 @@ class BlocklistEditor(QDialog):
         return [line.strip() for line in txt.splitlines() if line.strip()]
 
 
+class SettingsDialog(QDialog):
+    def __init__(self, parent=None):
+        super(SettingsDialog, self).__init__(parent)
+        self.setWindowTitle('Settings')
+        self.setModal(True)
+        layout = QVBoxLayout()
+
+        form = QFormLayout()
+        self.pause_spin = QSpinBox()
+        self.pause_spin.setRange(0, 5000)
+        self.pause_spin.setSingleStep(50)
+        self.pause_spin.setValue(int(settings.get('pause_after_set_ms', 500)))
+        form.addRow('Pause after programmatic copy (ms):', self.pause_spin)
+
+        self.secret_safe_chk = QCheckBox('Secret-safe mode')
+        self.secret_safe_chk.setChecked(bool(settings.get('secret_safe_mode', True)))
+        form.addRow('', self.secret_safe_chk)
+
+        self.persistence_chk = QCheckBox('Enable persistence (store history)')
+        self.persistence_chk.setChecked(bool(settings.get('persistence_enabled', False)))
+        form.addRow('', self.persistence_chk)
+
+        layout.addLayout(form)
+
+        bl_layout = QHBoxLayout()
+        self.edit_blocklist_btn = QPushButton('Edit blocklist')
+        bl_layout.addWidget(self.edit_blocklist_btn)
+        layout.addLayout(bl_layout)
+        self.blocklist_btn = self.edit_blocklist_btn
+        self.edit_blocklist_btn.clicked.connect(self._on_edit_blocklist)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self._on_apply)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        self.setLayout(layout)
+
+    def _on_edit_blocklist(self):
+        initial = settings.get('blocklist_apps', [])
+        if isinstance(initial, list):
+            initial_list = initial
+        else:
+            initial_list = list(initial)
+        editor = BlocklistEditor(self, initial_blocklist=initial_list)
+        if editor.exec() == QDialog.DialogCode.Accepted:
+            entries = editor.get_entries()
+            settings.set_('blocklist_apps', entries)
+
+    def _on_apply(self):
+        settings.set_('pause_after_set_ms', int(self.pause_spin.value()))
+        settings.set_('secret_safe_mode', bool(self.secret_safe_chk.isChecked()))
+        settings.set_('persistence_enabled', bool(self.persistence_chk.isChecked()))
+        settings.save_settings()
+        self.accept()
+
+
 class MainWindow(QMainWindow):
     def __init__(self, history=None):
         super(MainWindow, self).__init__()
@@ -40,7 +97,6 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 700, 480)
 
         self.history = history or History()
-        # initialize pause from settings
         self._pause_ms = int(settings.get('pause_after_set_ms', 300))
 
         self._history_listener = lambda: QTimer.singleShot(0, self._on_history_changed)
@@ -54,6 +110,10 @@ class MainWindow(QMainWindow):
         self.edit_blocklist_btn = QPushButton('Edit Blocklist')
         self.edit_blocklist_btn.clicked.connect(self._on_edit_blocklist)
         ss_layout.addWidget(self.edit_blocklist_btn)
+
+        self.settings_btn = QPushButton('Settings')
+        self.settings_btn.clicked.connect(self._open_settings_dialog)
+        ss_layout.addWidget(self.settings_btn)
 
         self.app_dropdown = QComboBox()
         self.app_dropdown.currentIndexChanged.connect(self.update_list)
@@ -131,7 +191,10 @@ class MainWindow(QMainWindow):
     def _on_pause_spin_changed(self, value: int):
         self._pause_ms = int(value)
         settings.set_('pause_after_set_ms', self._pause_ms)
-        settings.save_settings()
+        try:
+            settings.save_debounced()
+        except Exception:
+            pass
 
     def update_apps_dropdown(self):
         apps = self.history.get_apps()
@@ -272,6 +335,21 @@ class MainWindow(QMainWindow):
         if editor.exec() == QDialog.DialogCode.Accepted:
             entries = editor.get_entries()
             self.history.set_blocklist(entries)
+            settings.set_('blocklist_apps', entries)
+            settings.save_debounced()
+
+    def _open_settings_dialog(self):
+        dlg = SettingsDialog(self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            try:
+                self._pause_ms = int(settings.get('pause_after_set_ms', self._pause_ms))
+                self.pause_spin.setValue(self._pause_ms)
+            except Exception:
+                pass
+            try:
+                self.secret_safe_checkbox.setChecked(bool(settings.get('secret_safe_mode', self.secret_safe_checkbox.isChecked())))
+            except Exception:
+                pass
 
     def _on_hotkey_open(self):
         try:

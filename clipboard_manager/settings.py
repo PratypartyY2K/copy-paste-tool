@@ -20,8 +20,9 @@ DEFAULTS = {
     "debug_level": 0,
 }
 
-_callbacks = []  # type: ignore
+_callbacks = []
 _settings: Dict[str, Any] = {}
+_save_timer = None
 
 
 def get_config_dir(app_name: str = "CopyPasteTool") -> Path:
@@ -29,7 +30,6 @@ def get_config_dir(app_name: str = "CopyPasteTool") -> Path:
     if os.name == "nt":
         base = os.getenv("APPDATA", str(Path.home() / "AppData" / "Roaming"))
     else:
-        # POSIX
         base = os.getenv("XDG_CONFIG_HOME", str(Path.home() / ".config"))
     p = Path(base) / app_name
     p.mkdir(parents=True, exist_ok=True)
@@ -40,37 +40,38 @@ def get_config_path(app_name: str = "CopyPasteTool") -> Path:
     return get_config_dir(app_name) / "settings.json"
 
 
-def load_settings(app_name: str = "CopyPasteTool") -> Dict[str, Any]:
-    global _settings
-    cfg = DEFAULTS.copy()
-    path = get_config_path(app_name)
-    if path.exists():
-        try:
-            with path.open("r", encoding="utf-8") as f:
-                loaded = json.load(f)
-            if isinstance(loaded, dict):
-                cfg.update(loaded)
-        except Exception:
-            # If parsing fails, keep defaults and write a backup
-            try:
-                backup = path.with_suffix(".broken.json")
-                path.rename(backup)
-            except Exception:
-                pass
-    _settings = cfg
-    return _settings
-
-
-def save_settings(app_name: str = "CopyPasteTool") -> None:
-    path = get_config_path(app_name)
+def _do_save(path: Path):
     tmp = path.with_suffix(".tmp")
     try:
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(_settings or DEFAULTS, f, indent=2, ensure_ascii=False)
         tmp.replace(path)
     except Exception:
-        # Best-effort only
         pass
+
+
+def save_settings(app_name: str = "CopyPasteTool") -> None:
+    """Immediately write settings to disk."""
+    path = get_config_path(app_name)
+    _do_save(path)
+
+
+def save_debounced(delay: float = 0.5, app_name: str = "CopyPasteTool") -> None:
+    """Schedule a debounced save after `delay` seconds. Multiple calls reset the timer."""
+    global _save_timer
+    try:
+        if _save_timer is not None:
+            try:
+                _save_timer.cancel()
+            except Exception:
+                pass
+        path = get_config_path(app_name)
+        import threading
+        _save_timer = threading.Timer(delay, _do_save, args=(path,))
+        _save_timer.daemon = True
+        _save_timer.start()
+    except Exception:
+        save_settings(app_name)
 
 
 def get(key: str, default: Any = None) -> Any:
@@ -98,6 +99,23 @@ def unregister_callback(cb: Callable[[str, Any], None]) -> None:
         pass
 
 
-# Load defaults eagerly
-load_settings()
+def load_settings(app_name: str = "CopyPasteTool") -> Dict[str, Any]:
+    global _settings
+    cfg = DEFAULTS.copy()
+    path = get_config_path(app_name)
+    if path.exists():
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                cfg.update(loaded)
+        except Exception:
+            try:
+                backup = path.with_suffix('.broken.json')
+                path.replace(backup)
+            except Exception:
+                pass
+    _settings = cfg
+    return _settings
 
+load_settings()

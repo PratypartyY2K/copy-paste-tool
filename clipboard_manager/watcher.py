@@ -36,6 +36,14 @@ class ClipboardWatcher(QObject):
         self.clipboard = QApplication.clipboard()
         self.clipboard.dataChanged.connect(self._on_clipboard_change)
         self._ignore_until = 0.0
+        try:
+            self._default_pause_ms = int(settings.get('pause_after_set_ms', 500))
+        except Exception:
+            self._default_pause_ms = 500
+        try:
+            settings.register_callback(self._on_setting_changed)
+        except Exception:
+            pass
 
         try:
             import sys
@@ -458,14 +466,17 @@ class ClipboardWatcher(QObject):
 
     def pause(self, ms=None):
         if ms is None:
-            return
+            try:
+                ms = int(getattr(self, '_default_pause_ms', settings.get('pause_after_set_ms', 500)))
+            except Exception:
+                return
         try:
             ms = float(ms)
         except Exception:
             return
         self._ignore_until = time.time() + (ms / 1000.0)
 
-    def set_text(self, text: str, pause_ms: int = 300):
+    def set_text(self, text: str, pause_ms: int = None):
         """Set clipboard text programmatically and pause capture to avoid self-attribution."""
         try:
             cb = getattr(self, 'clipboard', None) or QApplication.clipboard()
@@ -473,8 +484,20 @@ class ClipboardWatcher(QObject):
         except Exception:
             pass
         try:
+            if pause_ms is None:
+                try:
+                    pause_ms = int(getattr(self, '_default_pause_ms', settings.get('pause_after_set_ms', 500)))
+                except Exception:
+                    pause_ms = 500
             self.pause(pause_ms)
             if os.environ.get('CLIP_DEBUG') == '2':
                 print("[clip-debug] set_text called; paused for %d ms" % (pause_ms,))
+        except Exception:
+            pass
+
+    def _on_setting_changed(self, key, value):
+        try:
+            if key == 'pause_after_set_ms':
+                self._default_pause_ms = int(value)
         except Exception:
             pass

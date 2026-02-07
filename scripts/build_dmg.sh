@@ -27,9 +27,22 @@ pyinstaller --noconfirm --name "$APP_NAME" --windowed --onedir "$ENTRY"
 # The .app bundle will be inside dist/CopyPasteTool/CopyPasteTool.app
 APP_BUNDLE_DIR="dist/${APP_NAME}/${APP_NAME}.app"
 if [ ! -d "$APP_BUNDLE_DIR" ]; then
-  echo "ERROR: expected app bundle at $APP_BUNDLE_DIR but not found"
-  ls -la dist || true
-  exit 2
+  # some PyInstaller versions put the .app directly under dist/
+  ALT_APP_BUNDLE="dist/${APP_NAME}.app"
+  if [ -d "$ALT_APP_BUNDLE" ]; then
+    APP_BUNDLE_DIR="$ALT_APP_BUNDLE"
+  else
+    echo "WARNING: expected app bundle at $APP_BUNDLE_DIR but not found; searching dist/"
+    ls -la dist || true
+    # try to find any .app inside dist
+    FOUND=$(find dist -maxdepth 2 -type d -name "*.app" -print -quit || true)
+    if [ -n "$FOUND" ]; then
+      APP_BUNDLE_DIR="$FOUND"
+    else
+      echo "ERROR: could not find .app bundle in dist/"
+      exit 2
+    fi
+  fi
 fi
 
 # Create a compressed dmg using hdiutil

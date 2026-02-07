@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "capture_enabled": true,
+  "pause_after_set_ms": 1111,
+  "secret_safe_mode": false,
+  "persistence_enabled": false,
+  "persistence_path": "",
+  "max_history_items": 500,
+  "dedupe_strategy": "lru",
+  "dedupe_lru_size": 200,
+  "dedupe_per_app_window_s": 30,
+  "blocklist_apps": [
+    "1password",
+    "bitwarden",
+    "lastpass",
+    "authenticator",
+    "keychain"
+  ],
+  "per_app_capture_toggle": {},
+  "pause_indicator_enabled": true,
+  "debug_level": 0
+}

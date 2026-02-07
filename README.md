@@ -291,6 +291,34 @@ If the CI badge link in the README is incorrect, replace the `your-org/your-repo
 - Token/JWT-like content is removed automatically by design when Secret-safe mode is enabled (default 30 seconds). Disable Secret-safe mode to keep all clips.
 
 
+## Building a macOS app and DMG
+
+A helper script is provided to create a macOS app bundle and a DMG using PyInstaller.
+
+To build (on macOS):
+
+```bash
+# create and activate a venv, install deps
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install pyinstaller
+
+# OPTIONAL: create an icns from the icon.iconset if you want a custom icon
+# (run on macOS where `iconutil` is available)
+./scripts/make_icns.sh
+
+# build the app and dmg
+./scripts/build_dmg.sh
+```
+
+Notes:
+- `./scripts/make_icns.sh` expects an `assets/icon.iconset/` directory with PNG files named for sizes (e.g. `icon_16x16.png`, `icon_32x32.png`, `icon_128x128.png`, etc.). It produces `assets/icon.icns`.
+- The PyInstaller spec (`CopyPasteTool.spec`) was updated to embed `assets/icon.icns` if present.
+- Without `assets/icon.icns` the build will proceed but the app will not have a custom icon.
+
+
 ## Contributing
 
 - Create a branch, add tests for new behavior (HistoryStore unit tests are quick), run the test scripts, and open a PR.

@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
 from PyQt6.QtWidgets import QApplication
 from clipboard_manager.utils import get_frontmost_app, get_top_window_owners, is_pyobjc_available
+from clipboard_manager import settings
 import time
 from datetime import datetime
 import os
@@ -38,9 +39,11 @@ class ClipboardWatcher(QObject):
 
         try:
             import sys
-            self._self_names = set([os.path.basename(sys.executable).lower(), os.path.splitext(os.path.basename(sys.argv[0]))[0].lower(), 'python', 'python3', 'clipboard'])
+            self._self_names = {os.path.basename(sys.executable).lower(),
+                                os.path.splitext(os.path.basename(sys.argv[0]))[0].lower(), 'python', 'python3',
+                                'clipboard'}
         except Exception:
-            self._self_names = set(['python', 'python3', 'clipboard'])
+            self._self_names = {'python', 'python3', 'clipboard'}
 
         self._app_history = deque(maxlen=80)
         self._last_sampled_app = None

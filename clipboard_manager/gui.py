@@ -7,6 +7,7 @@ from clipboard_manager.watcher import ClipboardWatcher
 from clipboard_manager.utils import trim_whitespace, copy_one_line, extract_urls_text, json_escape, to_camel_case, to_snake_case, fuzzy_score, highlight_match
 from PyQt6.QtCore import QTimer
 import os
+from clipboard_manager import settings
 
 
 class BlocklistEditor(QDialog):
@@ -39,7 +40,8 @@ class MainWindow(QMainWindow):
         self.setGeometry(100, 100, 700, 480)
 
         self.history = history or History()
-        self._pause_ms = 300
+        # initialize pause from settings
+        self._pause_ms = int(settings.get('pause_after_set_ms', 300))
 
         self._history_listener = lambda: QTimer.singleShot(0, self._on_history_changed)
         self.history.add_change_listener(self._history_listener)
@@ -128,6 +130,8 @@ class MainWindow(QMainWindow):
 
     def _on_pause_spin_changed(self, value: int):
         self._pause_ms = int(value)
+        settings.set_('pause_after_set_ms', self._pause_ms)
+        settings.save_settings()
 
     def update_apps_dropdown(self):
         apps = self.history.get_apps()

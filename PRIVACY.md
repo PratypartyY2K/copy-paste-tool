@@ -14,3 +14,4 @@ Privacy tips:
 
 If you plan to distribute this app, make sure users understand these defaults and how to change them in Settings.
 
+Last updated: 2026-02-07

@@ -106,4 +106,4 @@ Security
 --------
 - Please report any security vulnerabilities to the maintainers privately, and do not disclose them publicly until they are addressed.
 
-Last updated: 2026-02-06
+Last updated: 2026-02-07

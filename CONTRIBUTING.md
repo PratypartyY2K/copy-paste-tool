@@ -2,9 +2,6 @@
 
 Thank you for considering contributing to App-Aware Clipboard Manager. This project follows a simple workflow designed to keep changes safe and reviewed.
 
-License
-- This repository is licensed under the MIT License (see `LICENSE`). By contributing you agree to license your contributions under MIT as well.
-
 Getting started
 1. Fork the repository and create a branch for your change (feature/bugfix/test). Example:
 
@@ -36,7 +33,9 @@ Contributor responsibilities
 Migration note
 - If your change touches the persistence schema (for example, the `board` column was removed), include migration scripts and add a dry-run mode so operators can inspect the effects before applying.
 
-Archived reference implementation
-- The `boards` routing implementation has been deprecated and archived in `archive/boards_reference.py`. If your contribution seeks to reintroduce or improve app-aware routing, reference the archived file and provide explicit tests and a migration plan.
+License
+- This repository is licensed under the MIT License (see `LICENSE`). By contributing you agree to license your contributions under MIT as well.
 
 Thank you!
+
+Last updated: 2026-02-07

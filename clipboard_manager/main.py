@@ -9,6 +9,11 @@ from PyQt6.QtWidgets import QApplication
 from clipboard_manager.gui import MainWindow
 from clipboard_manager import settings
 
+try:
+    settings.load_settings()
+except Exception:
+    pass
+
 NO_GUI = os.environ.get('CLIP_NO_GUI') == '1' or '--no-gui' in sys.argv
 
 # Prefer explicit env var for DB path, otherwise fall back to settings

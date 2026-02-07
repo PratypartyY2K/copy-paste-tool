@@ -223,7 +223,11 @@ class HistoryStore:
     def _is_blocked_app(self, app_name: str) -> bool:
         if not app_name:
             return False
-        if not self.secret_safe_enabled:
+        try:
+            secret_safe = bool(settings.get('secret_safe_mode', True))
+        except Exception:
+            secret_safe = True
+        if not secret_safe:
             return False
         n = app_name.lower()
         for bad in self.blocklist_apps:
@@ -284,7 +288,11 @@ class HistoryStore:
 
             is_temp = False
             expire_at = None
-            if self.secret_safe_enabled and self._looks_like_token(content):
+            try:
+                secret_safe_now = bool(settings.get('secret_safe_mode', True))
+            except Exception:
+                secret_safe_now = True
+            if secret_safe_now and self._looks_like_token(content):
                 is_temp = True
                 expire_at = now + TEMPORARY_TOKEN_SECONDS
 

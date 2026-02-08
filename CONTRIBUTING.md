@@ -34,11 +34,6 @@ Migration note
 - If your change touches the persistence schema (for example, the `board` column was removed), include migration scripts and add a dry-run mode so operators can inspect the effects before applying.
 
 Packaging and releases
-- Packaging and publishing (for example, signed macOS `.app`/`.dmg`) is deferred; maintainers will coordinate a release when ready. Contributors who want to help prepare a release can open an issue or PR with a proposed release checklist.
-
-License
-- This repository is licensed under the MIT License (see `LICENSE`). By contributing you agree to license your contributions under MIT as well.
-
-Thank you!
+- I am not publishing signed macOS builds from this repository at the moment. I include helper scripts and a spec for local experimentation, and if I prepare an official signed build later I'll document the release steps.
 
 Last updated: 2026-02-07

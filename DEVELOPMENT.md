@@ -109,6 +109,6 @@ Security
 Packaging and releases
 ----------------------
 
-Packaging for macOS (creating a signed/notarized `.app`/`.dmg`) is intentionally deferred for a few weeks while we stabilize behavior and privacy defaults. The repo includes helper scripts and a PyInstaller spec for developers who want to experiment locally, but the maintainers are not producing or publishing official signed builds at this time.
+I include helper scripts and a PyInstaller spec so I can experiment locally with packaging. I am not publishing signed builds from this repository at the moment; when I decide to prepare an official signed/notarized build I will document the release steps here.
 
 Last updated: 2026-02-07

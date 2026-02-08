@@ -12,6 +12,6 @@ Privacy tips:
 - If you grant Accessibility permissions (macOS), the app can better attribute clipboard events to the source app; this requires macOS Privacy settings > Accessibility.
 - To completely avoid any storage, keep persistence disabled and secret-safe enabled in Settings.
 
-If you plan to distribute this app, make sure users understand these defaults and how to change them in Settings.
+I keep Secret-safe mode on by default, and persistence off by default. You can enable persistence and edit the blocklist in Settings.
 
 Last updated: 2026-02-07

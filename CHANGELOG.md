@@ -13,6 +13,6 @@ All notable changes to this project will be documented in this file.
 
 ## Packaging and Releases
 
-Packaging and a public release (signed/notarized macOS builds) is deferred until the maintainers finish testing and privacy verification. Expect packaging activity to resume in a few weeks.
+I am not publishing signed macOS builds from this repository yet. I include helper scripts for local experimentation; when I prepare an official signed/notarized release I will add release notes here.
 
 Last updated: 2026-02-07

@@ -27,19 +27,10 @@ class HistoryStore:
         self._lock = threading.RLock()
         self._cleanup_thread = None
         self._cleanup_event = threading.Event()
-
-        # initialize secret-safe flag from settings (defaults to True)
-        try:
-            self.secret_safe_enabled = bool(settings.get('secret_safe_mode', True))
-        except Exception:
-            self.secret_safe_enabled = True
-
+        self.secret_safe_enabled = True
         self.blocklist_apps = set(BLOCKLIST_DEFAULTS)
-
         self._app_capture_enabled = {}
-
         self._change_listeners = []
-
         self._persistence = persistence
         if self._persistence:
             try:
@@ -47,7 +38,6 @@ class HistoryStore:
             except Exception:
                 pass
 
-        # register for runtime settings changes to keep in sync
         try:
             settings.register_callback(self._on_setting_changed)
         except Exception:

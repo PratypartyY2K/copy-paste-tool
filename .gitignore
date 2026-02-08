@@ -70,4 +70,10 @@ Thumbs.db
 # JetBrains caches
 out/
 
+# Local test config used in some tests
+tmp_test_config/
+
+# MacOS disk images and built installers
+*.dmg
+
 # End of file

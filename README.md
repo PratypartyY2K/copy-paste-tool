@@ -291,14 +291,14 @@ If the CI badge link in the README is incorrect, replace the `your-org/your-repo
 - Token/JWT-like content is removed automatically by design when Secret-safe mode is enabled (default 30 seconds). Disable Secret-safe mode to keep all clips.
 
 
-## Building a macOS app and DMG (DEFERRED)
+## Building a macOS app and DMG
 
-Packaging and releasing a signed/notarized macOS application is currently deferred by the maintainers and will be done in a future release (planned in a few weeks). The repository contains helper scripts and a PyInstaller spec for convenience, but no official signed builds are published from this repo at the moment.
+I included helper scripts and a PyInstaller spec so I (or another developer) can experiment locally; however, I am not publishing official signed builds from this repository right now. If I decide to publish a signed/notarized macOS build later, I'll document the release steps here.
 
 If you are a developer and want to experiment locally (for testing only), the helper scripts remain in the `scripts/` folder:
 
 ```bash
-# OPTIONAL local experiment (macOS only) — packaging is not part of an active release
+# OPTIONAL local experiment (macOS only) — packaging is for developer experimentation
 # create and activate a venv, install deps
 python3 -m venv .venv
 source .venv/bin/activate
@@ -315,10 +315,6 @@ pip install pyinstaller
 
 Notes:
 - The scripts are intended for local experimentation by developers only. Do not check generated build artifacts (for example `.dmg` files) into the repository.
-- Official, signed, and notarized releases (if any) will be created and published by the maintainers separately when ready.
-
-## Concluding notes
-
-This project is actively developed. Packaging and publishing to end users is intentionally deferred to allow more testing, privacy review, and documentation updates. If you want to help prepare a release, open an issue or PR describing your proposed release steps and I will coordinate when we resume packaging.
+- If I later publish official, signed, and notarized releases, I will add those artifacts and explicit release notes.
 
 Last updated: 2026-02-07

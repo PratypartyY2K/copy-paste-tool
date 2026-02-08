@@ -106,4 +106,9 @@ Security
 --------
 - Please report any security vulnerabilities to the maintainers privately, and do not disclose them publicly until they are addressed.
 
+Packaging and releases
+----------------------
+
+Packaging for macOS (creating a signed/notarized `.app`/`.dmg`) is intentionally deferred for a few weeks while we stabilize behavior and privacy defaults. The repo includes helper scripts and a PyInstaller spec for developers who want to experiment locally, but the maintainers are not producing or publishing official signed builds at this time.
+
 Last updated: 2026-02-07

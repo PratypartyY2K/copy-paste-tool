@@ -291,13 +291,14 @@ If the CI badge link in the README is incorrect, replace the `your-org/your-repo
 - Token/JWT-like content is removed automatically by design when Secret-safe mode is enabled (default 30 seconds). Disable Secret-safe mode to keep all clips.
 
 
-## Building a macOS app and DMG
+## Building a macOS app and DMG (DEFERRED)
 
-A helper script is provided to create a macOS app bundle and a DMG using PyInstaller.
+Packaging and releasing a signed/notarized macOS application is currently deferred by the maintainers and will be done in a future release (planned in a few weeks). The repository contains helper scripts and a PyInstaller spec for convenience, but no official signed builds are published from this repo at the moment.
 
-To build (on macOS):
+If you are a developer and want to experiment locally (for testing only), the helper scripts remain in the `scripts/` folder:
 
 ```bash
+# OPTIONAL local experiment (macOS only) — packaging is not part of an active release
 # create and activate a venv, install deps
 python3 -m venv .venv
 source .venv/bin/activate
@@ -305,27 +306,19 @@ pip install --upgrade pip
 pip install -r requirements.txt
 pip install pyinstaller
 
-# OPTIONAL: create an icns from the icon.iconset if you want a custom icon
-# (run on macOS where `iconutil` is available)
-./scripts/make_icns.sh
+# OPTIONAL: create an icns from the icon.iconset (macOS only)
+# ./scripts/make_icns.sh
 
-# build the app and dmg
-./scripts/build_dmg.sh
+# build the app and dmg locally (not recommended for end-user distribution)
+# ./scripts/build_dmg.sh
 ```
 
 Notes:
-- `./scripts/make_icns.sh` expects an `assets/icon.iconset/` directory with PNG files named for sizes (e.g. `icon_16x16.png`, `icon_32x32.png`, `icon_128x128.png`, etc.). It produces `assets/icon.icns`.
-- The PyInstaller spec (`CopyPasteTool.spec`) was updated to embed `assets/icon.icns` if present.
-- Without `assets/icon.icns` the build will proceed but the app will not have a custom icon.
+- The scripts are intended for local experimentation by developers only. Do not check generated build artifacts (for example `.dmg` files) into the repository.
+- Official, signed, and notarized releases (if any) will be created and published by the maintainers separately when ready.
 
+## Concluding notes
 
-## Contributing
-
-- Create a branch, add tests for new behavior (HistoryStore unit tests are quick), run the test scripts, and open a PR.
-- Helpful areas: persist history, image/rich clipboard support, improve token heuristics, better search (fuzzy matching), keyboard shortcuts.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+This project is actively developed. Packaging and publishing to end users is intentionally deferred to allow more testing, privacy review, and documentation updates. If you want to help prepare a release, open an issue or PR describing your proposed release steps and I will coordinate when we resume packaging.
 
 Last updated: 2026-02-07
